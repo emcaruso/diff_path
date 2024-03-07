@@ -1,0 +1,20 @@
+interactive: True
+scenes_dir: "../scenes/" #relative path to scenes
+data_dir: "../data/" # relative path to calib data
+
+env: "Basler"
+dataset_name: "default"
+
+# env: "Blender"
+# dataset_name: "blender_1_full"
+
+save_name: "ciao"
+charuco_board: "charuco_7x5_3boards.yml"
+generate_data: False
+manual_intr: True
+manual: True
+intr: True
+blend_dir: ""
+blend_dataset: ""
+no_render: True
+no_basl_gen: True
