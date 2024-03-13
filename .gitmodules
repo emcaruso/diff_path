@@ -4,3 +4,9 @@
 [submodule "data/scenes"]
 	path = data/scenes
 	url = https://github.com/emcaruso/scenes.git
+[submodule "src/LightCalib"]
+	path = src/LightCalib
+	url = https://github.com/emcaruso/LightCalib.git
+[submodule "src/SceneLoader"]
+	path = src/SceneLoader
+	url = https://github.com/emcaruso/SceneLoader.git

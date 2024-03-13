@@ -1,6 +1,7 @@
 interactive: True
-scenes_dir: "../scenes/" #relative path to scenes
-data_dir: "../data/" # relative path to calib data
+scenes_dir: "../data/scenes/" #relative path to scenes
+save_dir: "../data/calib_data" # relative path to calib data
+calib_dir: "../src/Calibration" # relative path to calib 
 
 env: "Basler"
 dataset_name: "default"
@@ -8,7 +9,7 @@ dataset_name: "default"
 # env: "Blender"
 # dataset_name: "blender_1_full"
 
-save_name: "ciao"
+save_name: "cvl1"
 charuco_board: "charuco_7x5_3boards.yml"
 generate_data: False
 manual_intr: True

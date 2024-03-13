@@ -1,0 +1,29 @@
+
+lights:
+  n_lights: 1
+
+aruco:
+  dict:
+  number:
+
+tuning:
+  signal_period: 100000
+  exposure_time: 250
+  min_exp_time: 20
+  optimal_intensity: 245
+  K_et: 25
+  # et_coeff: 0.1
+  batch_size: 20
+  n_tests: 30
+  std_thresh: 0.5
+  
+plane_estimator:
+  aruco_n: 4
+  aruco_size: 1000
+  exposure_time: 40000
+  signal_period: 100000
+  grid_res: [3,2]
+  edge_len: 0.15
+
+calib_yaml: "./calibration.yaml"
+sceneload_dir: "../src/SceneLoader/"
