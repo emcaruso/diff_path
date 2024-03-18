@@ -11,11 +11,13 @@ dataset_name: "default"
 
 save_name: "cvl1"
 charuco_board: "charuco_7x5_3boards.yml"
-generate_data: False
-manual_intr: True
+generate_data: True
+manual_intr: False
 manual: True
 intr: True
 blend_dir: ""
 blend_dataset: ""
 no_render: True
-no_basl_gen: True
+dist_thresh_auto: 50
+
+# no_basl_gen: False
