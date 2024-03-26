@@ -2,6 +2,7 @@ interactive: True
 scenes_dir: "../data/scenes/" #relative path to scenes
 save_dir: "../data/calib_data" # relative path to calib data
 calib_dir: "../src/Calibration" # relative path to calib 
+aruco_struct: "aruco_struct.yaml" # relative path to calib 
 
 env: "Basler"
 dataset_name: "default"
@@ -11,13 +12,12 @@ dataset_name: "default"
 
 save_name: "cvl1"
 charuco_board: "charuco_7x5_3boards.yml"
-generate_data: True
+generate_data: False
 manual_intr: False
 manual: True
 intr: True
 blend_dir: ""
 blend_dataset: ""
 no_render: True
-dist_thresh_auto: 50
+dist_thresh_auto: 10000
 
-# no_basl_gen: False
