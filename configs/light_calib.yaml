@@ -1,6 +1,11 @@
 
+calib_yaml: "./calibration.yaml"
+sceneload_dir: "../src/SceneLoader/"
+save_dir: "../data/calib_data" # relative path to calib data
+
 lights:
   n_lights: 1
+  blender_size: 0.01
 
 aruco:
   dict:
@@ -8,24 +13,26 @@ aruco:
 
 tuning:
   signal_period: 100000
-  exposure_time: 250
+  exposure_time: 1000
   min_exp_time: 20
-  optimal_intensity: 245
+  optimal_intensity: 249
   K_et: 25
   # et_coeff: 0.1
   batch_size: 20
-  n_tests: 30
+  n_tests: 10
   std_thresh: 0.5
-  
+
 plane_estimator:
   exposure_time: 40000
   signal_period: 100000
-  integrate_n_frames: 10
+  integrate_n_frames: 1
+  position_thresh: 0.1
+  orientation_thresh: 0.1
   aruco_pnp:
     aruco_cfg:
       dict_n: 4
       dict_size: 50
-      range_idxs: [0,8]
+      range_idxs: [0,9]
     struct: 
       positions:
         - [-2, -4, 0]
@@ -62,8 +69,7 @@ plane_estimator:
         - 9
       convention: "YXZ"
       marker_length: 1
-      scale: 0.023
+      # scale: 0.023
+      scale: 0.0225
     n_aruco_thresh: 0
 
-calib_yaml: "./calibration.yaml"
-sceneload_dir: "../src/SceneLoader/"

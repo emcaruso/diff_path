@@ -1,0 +1,195 @@
+from utils_ema.basler_utils import frame_extractor
+from utils_ema.general import get_monitor
+from utils_ema.image import Image
+from plane_estimator import PlaneEstimator
+import cv2
+import torch
+import math
+from utils_ema.plot import plotter
+from tqdm import tqdm
+import sys, os
+import omegaconf
+
+m = get_monitor()
+
+script_dir = os.path.abspath(os.path.dirname(__file__))
+
+class LightCalib():
+
+    def __init__(self, cfg, scene):
+        self.cfg = cfg
+        self.scene = scene
+
+        self.load_calibrated_cameras()
+        self.fe = frame_extractor()
+
+
+    # def calibrate_lights(self):
+    #     # self.fe.start_cams(signal_period=self.cfg.signal_period, exposure_time=self.cfg.exposure_time)
+    #     self.fe.start_cams(signal_period=self.cfg.tuning.signal_period)
+    #     while True:
+    #         self.tune()
+
+    #         # self.fe.show_cams(wk=1)
+
+    #     # rays = tune()
+    #     # intersection = intersect_rays(rays) pass
+
+    def show_plane(self):
+        pe = PlaneEstimator(self.cfg, self.scene.cams[0])
+        pe.show_plane()
+
+    def load_calibrated_cameras(self):
+        sys.path.append( self.cfg.calib_cfg.calib_dir )
+        from load_calibration_data import CalibLoader
+        cl = CalibLoader(self.cfg.calib_cfg)
+        self.calib_data = cl.get_calib_parameters()
+
+    def tune_exposure(self):
+        print("Tuning exposure time for light beam detection")
+        self.fe.start_cams(signal_period=self.cfg.tuning.signal_period, exposure_time=self.cfg.tuning.exposure_time)
+
+        # Tune exposure time
+        bool_list = [False for i in range(self.fe.num_cameras)]
+        while True:
+            images = self.fe.grab_multiple_cams()
+            Image.show_multiple_images(images, wk=1)
+            string = "exposure time: "
+            for i, image in enumerate(images):
+                _, m = image.get_pix_max_intensity()
+
+                # change exposure time
+                cam = self.fe.cam_array[i]
+                et = cam.ExposureTime.GetValue()
+
+                et_new = int(et-self.cfg.tuning.K_et*(m-self.cfg.tuning.optimal_intensity))
+                et_new = max(et_new, self.cfg.tuning.min_exp_time)
+                self.fe.change_exposure(cam, et_new)
+                self.cfg.tuning.exposure_time = et_new
+
+                if et_new==et or et_new==self.cfg.tuning.min_exp_time:
+                    bool_list[i] = True
+
+                string += "camera "+str(i)+": "+str(et_new)+", "
+            print(string)
+
+            if all(bool_list):
+                print("calibrated exposure time: ", et_new)
+                break
+        self.fe.stop_multiple_cams()
+
+    def tune_batch(self):
+        self.fe.start_cams(signal_period=self.cfg.tuning.signal_period, exposure_time=self.cfg.tuning.exposure_time)
+        for i in range(self.cfg.tuning.n_tests):
+            mean, std, in_thresh = self.get_light_pix(self.cfg.tuning.batch_size)
+
+            print(f"Test: {i}, std: {float(std.mean(dim=0).max())}")
+            if not in_thresh:
+                print("resizing batch!")
+                self.cfg.tuning.batch_size = self.cfg.tuning.batch_size*2
+
+            images = self.fe.grab_multiple_cams()
+            for j in range(self.fe.num_cameras):
+                images[j].show_points(mean[j:j+1,:],wk=1, name=str(j))
+        self.fe.stop_multiple_cams()
+
+
+    def tune(self):
+        self.tune_exposure()
+        self.tune_batch()
+
+
+    def get_light_pix(self, batch_size=1):
+        pix_maxs = [[] for i in range(self.fe.num_cameras)]
+        for _ in range(batch_size):
+            images = self.fe.grab_multiple_cams()
+            for j, image in enumerate(images):
+                pix_max, _ = image.get_pix_max_intensity()
+                pix_maxs[j].append(pix_max)
+
+        std_tens = torch.zeros((self.fe.num_cameras,2))
+        mean_tens = torch.zeros((self.fe.num_cameras,2))
+        for i, tns in enumerate(pix_maxs):
+            pix_maxs_ = torch.cat(tns)
+            # print(pix_maxs_)
+            # images[i].show_points(pix_maxs_,wk=1, name=str(i))
+            pix_maxs_ = pix_maxs_.type(torch.float32)
+            std = torch.std(pix_maxs_,dim=0)
+            mean = torch.mean(pix_maxs_,dim=0)
+            std_tens[i,:] = std
+            mean_tens[i,:] = mean
+
+        # control on standard deviation
+        max_std = float(std_tens.mean(dim=0).max())
+
+        # print(max_std)
+        # print(self.cfg.tuning.std_thresh)
+        in_thresh = math.isnan(max_std) or max_std < self.cfg.tuning.std_thresh
+
+        return mean_tens, std_tens, in_thresh
+
+
+    def show_light_pix(self):
+        self.fe.start_cams(signal_period=self.cfg.tuning.signal_period, exposure_time=self.cfg.tuning.exposure_time)
+        while True:
+            images = self.fe.grab_multiple_cams()
+            mean, _, _ = self.get_light_pix()
+            for j in range(self.fe.num_cameras):
+                key = images[j].show_points(mean[j:j+1,:],wk=1, name=str(j))
+                print(key)
+                
+                if key==ord('q'):
+                    print("Q pressed")
+                    break
+
+        self.fe.stop_multiple_cams()
+
+    def calibrate_point_light(self):
+        self.fe.start_cams(signal_period=self.cfg.tuning.signal_period, exposure_time=self.cfg.tuning.exposure_time)
+        pixs, _, in_thresh = self.get_light_pix()
+        for i in range(pixs.shape[0]):
+            cam = self.scene.get_cam(i)
+            pix = pixs[i,:]
+            ray = cam.pix2ray(pix)
+            print(ray)
+            plotter.plot_cam(cam)
+            plotter.plot_ray(ray[0], ray[1])
+        plotter.show()
+        print("AOOO")
+
+        assert in_thresh
+
+        self.fe.stop_multiple_cams()
+        exit(1)
+
+
+
+    # def detect_planes(self):
+    #     # detect aruco frames using dict
+    #     # frames 2 plane (chatgpt?)
+    #     return plane (normal?)
+    
+# __init__(self, cfg):
+#     self.cfg = cfg
+
+# calibrate_lights(self):
+#         rays = get_ray_lights(self)
+#     intersect rays(rays)
+
+# get_ray_lights(self):
+#     	rays = []
+#     	for cam_id in self.cfg.n_lights
+#     grab_cam(self. cam_id) -> Image
+#     pix = image.get_max_pix()
+#     ray = pix2ray(pix)
+#     detect_plane_aruco(image)
+# 		reflected_ray = reflect_ray (dot product?)
+# 		rays.append(reflected_ray)
+# 	ray_lights = torch.cat( rays )
+# 	return ray_lights
+
+# detect_plane(image):
+#     # detect aruco frames using dict
+#     # frames 2 plane (chatgpt?)
+#     return plane (normal?)
+    
