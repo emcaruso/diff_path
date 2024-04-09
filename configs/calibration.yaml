@@ -1,8 +1,11 @@
 interactive: True
-scenes_dir: "../data/scenes/" #relative path to scenes
-save_dir: "../data/calib_data" # relative path to calib data
-calib_dir: "../src/Calibration" # relative path to calib 
-aruco_struct: "aruco_struct.yaml" # relative path to calib 
+
+paths:
+  config_dir: "."
+  scene_dir: "../data/scenes/${env}/${dataset_name}"
+  save_dir: "../data/calib_data/${save_name}" 
+  calib_dir: "../src/Calibration" 
+  aruco_struct: "./aruco_struct.yaml" 
 
 env: "Basler"
 dataset_name: "default"

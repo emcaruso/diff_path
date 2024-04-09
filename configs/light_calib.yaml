@@ -1,7 +1,9 @@
 
-calib_yaml: "./calibration.yaml"
-sceneload_dir: "../src/SceneLoader/"
-save_dir: "../data/calib_data" # relative path to calib data
+paths:
+  calib_yaml: "./calibration.yaml"
+  save_dir: "../data/light_calib_data"
+
+save_name: "cvl1"
 
 lights:
   n_lights: 1
