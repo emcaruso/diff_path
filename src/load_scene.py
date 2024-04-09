@@ -12,8 +12,8 @@ def load_scene():
     # point_lights = lcl.get_point_lights()
     # scene = lcl.get_scene_only_lights()
     scene = lcl.get_scene()
-    scene.plot()
     return scene
 
 if __name__=="__main__":
-    load_scene()
+    scene = load_scene()
+    scene.plot()
