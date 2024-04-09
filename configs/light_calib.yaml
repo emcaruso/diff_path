@@ -1,7 +1,7 @@
 
 paths:
   calib_yaml: "./calibration.yaml"
-  save_dir: "../data/light_calib_data"
+  save_dir: "../data/light_calib_data/${save_name}"
 
 save_name: "cvl1"
 
