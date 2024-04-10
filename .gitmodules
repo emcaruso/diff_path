@@ -10,3 +10,9 @@
 [submodule "src/SceneLoader"]
 	path = src/SceneLoader
 	url = https://github.com/emcaruso/SceneLoader.git
+[submodule "src/conveyor_pose_estimator"]
+	path = src/conveyor_pose_estimator
+	url = https://github.com/emcaruso/conveyor_pose_estimator.git
+[submodule "src/ConveyorPoseEstimator"]
+	path = src/ConveyorPoseEstimator
+	url = https://github.com/emcaruso/ConveyorPoseEstimator.git
