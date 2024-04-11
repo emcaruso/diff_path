@@ -1,0 +1,45 @@
+paths:
+  blender_dir: "../data/${save_name}/calib_data/scene"
+  # save_dir: "../data/pose_estimator_data/${save_name}"
+  save_dir: "../data/${save_name}/pose_estimator_data"
+  tables_dir: "${paths.save_dir}/tables"
+  ref_dir: "${paths.save_dir}/reference"
+  mesh_dir: "${paths.save_dir}/mesh"
+  calib_yaml: "./calibration.yaml"
+  captured_dir: "${paths.save_dir}/captured"
+
+save_name: "cvl1"
+
+render_tables:
+  do: True
+  reference:
+    location: [0, 0, 0]
+    euler: [0, 0, 0]
+  ranges:
+    # x: [-0.2, 0.2]
+    y: [-0., 0.]
+    a: [-0., 0.]
+    x: [-0.008, 0.0008]
+    # y: [-0.008, 0.0008]
+    # a: [-0., 0.]
+  intervals:
+    # x: 256
+    y: 0
+    a: 0
+    x: 16
+    # y: 16
+    # a: 0
+  threshold: 0.2
+  cam_collection: "estimated_poses"
+  obj_name: "cj"
+  obj_scale: 0.985
+  # obj_scale: 1
+
+generate_bin:
+  do: True
+
+pose_estimator:
+  signal_period: 500000
+  score_thresh: 0.2
+  clamp_thresh: 0.02
+  scale_fact: 1

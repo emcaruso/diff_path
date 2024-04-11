@@ -3,7 +3,9 @@ interactive: True
 paths:
   config_dir: "."
   scene_dir: "../data/scenes/${env}/${dataset_name}"
-  save_dir: "../data/calib_data/${save_name}" 
+  # save_dir: "../data/calib_data/${save_name}" 
+  save_dir: "../data/${save_name}/calib_data" 
+  save_scene: "${paths.save_dir}/scene" 
   calib_dir: "../src/Calibration" 
   aruco_struct: "./aruco_struct.yaml" 
 
