@@ -1,0 +1,92 @@
+
+
+
+
+var JSConf = {};
+
+// usage: JSConf.javascript.svgPATH
+
+JSConf.javascript = {
+    
+	
+	'svgPATH': '/fp-1682415895/media/resources/img/svg-sprite.svg',
+	
+	// camera selectors
+    'cameraSelector1FilterJSON': '/en/sales-support/tools/camera_selector_controller.php?category=asc&action=filter&time=1695334223520',
+    'cameraSelector2FilterJSON': '/en/sales-support/tools/camera_selector_controller.php?category=lsc&action=filter&time=1695334223520',
+    'cameraSelector3FilterJSON': '/en/sales-support/tools/camera_selector_controller.php?category=nwc&action=filter&time=1695334223520',
+    'cameraSelector1ResultJSON': '/en/sales-support/tools/camera_selector_controller.php?category=asc&action=result&time=1695334223520',
+    'cameraSelector2ResultJSON': '/en/sales-support/tools/camera_selector_controller.php?category=lsc&action=result&time=1695334223520',
+    'cameraSelector3ResultJSON': '/en/sales-support/tools/camera_selector_controller.php?category=nwc&action=result&time=1695334223520',
+    
+    // lens selector
+    'lensSelectorOptionsSerieJSON': '/en/controller/objektivselektor_controller.php?category=series&action=filter&time=1695334223520',
+    'lensSelectorOptionsModelJSON': '/en/controller/objektivselektor_controller.php?category=models&action=filter&time=1695334223520',
+    'lensSelectorLensesPath': '/en/json/lenses.json',
+    'lensSelectorCamerasPath': '/en/json/camera.json',
+    
+    'lensSelectorResultJSON': '/en/controller/objektivselektor_controller.php?action=result&time=1695334223520',
+    'lensSelectorUserFieldsJSON': '/en/controller/objektivselektor_controller.php?action=userinput&time=1695334223520',
+    
+    // framegrabber
+    'framegrabberSelectorFilterJSON': '/en/sales-support/tools/framegrabber_selector_controller.php?action=filter&time=1695334223520',
+    'framegrabberSelectorResultJSON': '/en/sales-support/tools/framegrabber_selector_controller.php?action=result&time=1695334223520',
+   
+   
+    // quick search
+    'quicksearchCamerasJSON': '/en/products/cameras/quick-finder-controller/',
+    
+    //downloads
+	'downloadsFilterJSON': '/en/downloads/pt_documents_controller/?action=filter&time=1695334223520',    
+	'downloadsResultJSON': '/en/downloads/pt_documents_controller/?action=result&time=1695334223520',
+
+    // news filter
+    'newsFilterJSON': '/en/company/news-press/pt_news_overview_controller/?action=filter&time=1695334223520',
+    'newsResultJSON': '/en/company/news-press/pt_news_overview_controller/?action=result&time=1695334223520',
+    
+    // view cart
+    'viewCartResultJSON': '/en/controller/product_cart_controller.php?action=view&time=1695334223520',
+    'viewCartSimilarProductsResultJSON': '/en/controller/product_cart_controller.php?action=accessories&time=1695334223520',
+    
+    // compare & favourites cart
+    'compareFavouritesResultJSON': '/en/controller/product_watchlist_controller.php?action=view&time=1695334223520',
+      
+    // delete
+    'deleteFromFavJSON': '/en/controller/sticky_nav_watchlist_controller.php?action=delete&time=1695334223520',
+    'deleteFromCartJSON': '/en/controller.php?action=delete&time=1695334223520',
+    
+    // add
+    'addToFavJSON': '/en/controller/sticky_nav_watchlist_controller.php?action=add&time=1695334223520',
+    'addToCartJSON': '/en/controller.php?action=add&time=1695334223520',
+    
+    // update
+    'updateCartJSON': '/en/controller/product_cart_controller.php?action=update&time=1695334223520',
+	
+	// getprice
+	'getPriceJSON': '/en/sales-support/tools/price_for_article_controller.php?time=1695334223520',
+	
+	//pricebook
+	'getPricebook' : '/en/json/countrypricebook.json',
+	
+	// sticky nav
+    'stickynavBasketJSON': '/en/controller.php?action=view&time=1695334223520',
+    'stickynavCompareJSON': '/en/controller/sticky_nav_watchlist_controller.php?action=view&time=1695334223520',
+    
+   	// Vision System Configurator (product advisor)
+	'paLink':	'/en/sales-support/tools/vision-system-configurator/',
+	
+	 'watchlistCameraPath': '/en/json/camera.json',
+	'watchlistAccessoryPath': '/en/json/accessory.json',
+
+	// worldmaps
+	'worldmapSalesPath' : '/en/map_salescontact_json/map_salescontact_json_1.json',
+	'worldmapLocationPath' : '/en/map_location_json/map_location_json_1.json',
+
+	// software comparison table
+	'watchlistSample': '/en/service/sample_json/sample_json.json',
+	'watchlistSoftwarePath': '/en/service/software_comparison_json/software_comparison_json.json',
+
+	'production': false
+}
+
+JSConf.version = '31.0.0';

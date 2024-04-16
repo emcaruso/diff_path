@@ -1,25 +1,67 @@
 interactive: True
 
 paths:
-  config_dir: "."
-  scene_dir: "../data/scenes/${env}/${dataset_name}"
-  # save_dir: "../data/calib_data/${save_name}" 
-  save_dir: "../data/${save_name}/calib_data" 
+  config_dir: "${oc.env:YAML_DIR}"
+  scene_dir: "${paths.config_dir}/../data/scenes/${env}/${dataset_name}"
+  save_dir: "${paths.config_dir}/../data/${save_name}/calib_data" 
   save_scene: "${paths.save_dir}/scene" 
-  calib_dir: "../src/Calibration" 
-  aruco_struct: "./aruco_struct.yaml" 
-
-env: "Basler"
-dataset_name: "default"
-
-# env: "Blender"
-# dataset_name: "blender_1_full"
+  out_dir: "${paths.save_dir}/output" 
+  in_dir: "${paths.save_dir}/input" 
+  charuco_board_path: "${paths.calib_dir}/data/charuco_boards/${charuco_board}" 
+  sensor_path: "${paths.calib_dir}/data/sensors/${sensor}.yml" 
+  calib_dir: "${paths.config_dir}/../src/Calibration" 
+  aruco_struct: "${paths.config_dir}/aruco_struct.yaml" 
 
 save_name: "cvl1"
 charuco_board: "charuco_7x5_3boards.yml"
-generate_data: False
-manual_intr: False
-manual: True
+sensor: "Basler_ace2_a2A1920"
+
+# env: "Blender"
+# dataset_name: "blender_1_full"
+#
+env: "Basler"
+dataset_name: "default"
+
+intrinsics_calibration:
+  name: "Intrinsics calibration"
+  do: False
+  generate_data:
+    do: False
+    per_cam: True
+    automatic: True
+    dist_thresh_auto: 10000 # if automaic
+  paths:
+    out_dir: "${paths.out_dir}/intrinsics" 
+    in_dir: "${paths.in_dir}/intrinsics" 
+    cache_dir: "Data/intrinsics"
+    charuco_board_path: "${paths.charuco_board_path}"
+    sensor_path: "${paths.sensor_path}"
+  calibration:
+    do: True
+    fix_intr: False
+    intr_start: "None"
+
+global_calibration:
+  name: "Global calibration"
+  do: False
+  generate_data:
+    do: False
+    per_cam: False
+    automatic: False
+    dist_thresh_auto: 10000 # if automaic
+  paths:
+    out_dir: "${paths.out_dir}/global" 
+    in_dir: "${paths.in_dir}/global" 
+    cache_dir: "Data/global"
+    charuco_board_path: "${paths.charuco_board_path}"
+    sensor_path: "${paths.sensor_path}"
+  calibration:
+    do: True
+    fix_intr: True
+    intr_start: "${paths.out_dir}/intrinsics/calibrated_cameras_data.yml"
+    # intr_start: "None"
+
+
 intr: True
 blend_dir: ""
 blend_dataset: ""

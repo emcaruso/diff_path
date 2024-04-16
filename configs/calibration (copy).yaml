@@ -1,0 +1,28 @@
+interactive: True
+
+paths:
+  config_dir: "."
+  scene_dir: "../data/scenes/${env}/${dataset_name}"
+  # save_dir: "../data/calib_data/${save_name}" 
+  save_dir: "../data/${save_name}/calib_data" 
+  save_scene: "${paths.save_dir}/scene" 
+  calib_dir: "../src/Calibration" 
+  aruco_struct: "./aruco_struct.yaml" 
+
+env: "Basler"
+dataset_name: "default"
+
+# env: "Blender"
+# dataset_name: "blender_1_full"
+
+save_name: "cvl1"
+charuco_board: "charuco_7x5_3boards.yml"
+generate_data: False
+manual_intr: False
+manual: True
+intr: True
+blend_dir: ""
+blend_dataset: ""
+no_render: True
+dist_thresh_auto: 10000
+

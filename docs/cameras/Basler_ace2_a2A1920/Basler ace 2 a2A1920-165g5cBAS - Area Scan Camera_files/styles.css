@@ -1,0 +1,79 @@
+/* Extra small devices (phones, 600px and down) */
+@media only screen and (max-width: 600px) {
+	#cp-popup {
+		display:none;
+		top: 5%;
+		left: 0;
+		width: 95%;
+		height: auto;
+		margin: 0 10px;		
+		position: fixed;
+		background: #fff;
+		border: 3px solid #15487f;
+		padding: 20px 10px;
+		text-align: center;
+		border-radius: 16px;
+		box-shadow: 0 0 60px #00000040;
+		z-index: 9999;
+	}
+}
+
+/* Small devices (portrait tablets and large phones, 600px and up) */
+@media only screen and (min-width: 600px) {
+	#cp-popup {
+		display:none;
+		top: 5%;
+		left: 0;
+		width: 95%;
+		height: auto;
+		margin: 0 10px;
+		position: fixed;
+		background: #fff;
+		border: 3px solid #15487f;
+		padding: 20px 10px;
+		text-align: center;
+		border-radius: 16px;
+		box-shadow: 0 0 60px #00000040;
+		z-index: 9999;
+	}
+}
+
+/* Medium devices (landscape tablets, 768px and up) */
+@media only screen and (min-width: 768px) {
+	#cp-popup {
+		display:none;
+		position: fixed;
+		top: 50%;
+		left: 50%;
+		width: 640px;
+		height: 500px;
+		background: #fff;
+		border: 3px solid #15487f;
+		padding: 20px 10px;
+		text-align: center;
+		margin-top: -250px; /* Negative half of height. */
+		margin-left: -320px;
+		border-radius: 16px;
+		box-shadow: 0 0 60px #00000040;
+		z-index: 9999;
+	}
+}
+#cp-popup #popup-close-icon {
+		position: absolute;
+		right: 5px;			
+		z-index: 1000;
+		cursor: pointer;
+		top: 5px;
+}
+#cp-grayout {
+   position: fixed;
+   left: 0px;
+   top: 0px;
+   height: 100%;
+   width: 100%;
+   background-color: black;
+   opacity: 0.3;
+   z-index: 9998;
+   display:none;
+} 
+
