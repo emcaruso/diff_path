@@ -7,13 +7,15 @@ paths:
   save_scene: "${paths.save_dir}/scene" 
   out_dir: "${paths.save_dir}/output" 
   in_dir: "${paths.save_dir}/input" 
+  results_final_dir: "${global_calibration.paths.out_dir}"
   charuco_board_path: "${paths.calib_dir}/data/charuco_boards/${charuco_board}" 
   sensor_path: "${paths.calib_dir}/data/sensors/${sensor}.yml" 
   calib_dir: "${paths.config_dir}/../src/Calibration" 
   aruco_struct: "${paths.config_dir}/aruco_struct.yaml" 
 
 save_name: "cvl1"
-charuco_board: "charuco_7x5_3boards.yml"
+# charuco_board: "charuco_7x5_3boards.yml"
+charuco_board: "charuco_11x9_cvl.yml"
 sensor: "Basler_ace2_a2A1920"
 
 # env: "Blender"
@@ -26,7 +28,7 @@ intrinsics_calibration:
   name: "Intrinsics calibration"
   do: False
   generate_data:
-    do: False
+    do: True
     per_cam: True
     automatic: True
     dist_thresh_auto: 10000 # if automaic
@@ -37,7 +39,7 @@ intrinsics_calibration:
     charuco_board_path: "${paths.charuco_board_path}"
     sensor_path: "${paths.sensor_path}"
   calibration:
-    do: True
+    do: False
     fix_intr: False
     intr_start: "None"
 
@@ -45,7 +47,7 @@ global_calibration:
   name: "Global calibration"
   do: False
   generate_data:
-    do: False
+    do: True
     per_cam: False
     automatic: False
     dist_thresh_auto: 10000 # if automaic
