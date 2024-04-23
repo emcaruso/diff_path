@@ -1,0 +1,22 @@
+
+paths:
+  xml_path: "${oc.env:YAML_DIR}/../data/${save_name}/pose_estimator_data/scene/mitsuba_scene/scene.xml"
+
+save_name: "cvl1"
+
+renderer:
+  # variant: "scalar_rgb"
+  # variant: "llvm_ad_rgb"
+  spp: 256
+  variant: "cuda_ad_rgb"
+  seed: 666
+  max_depth: 8
+  rr_depth: 5
+
+
+
+optim:
+
+
+
+

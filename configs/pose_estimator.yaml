@@ -2,6 +2,7 @@ paths:
   blender_dir: "${oc.env:YAML_DIR}/../data/${save_name}/calib_data/scene"
   # save_dir: "../data/pose_estimator_data/${save_name}"
   save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/pose_estimator_data"
+  save_scene_dir: "${paths.save_dir}/scene"
   tables_dir: "${paths.save_dir}/tables"
   ref_dir: "${paths.save_dir}/reference"
   mesh_dir: "${paths.save_dir}/mesh"

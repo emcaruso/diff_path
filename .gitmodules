@@ -10,3 +10,6 @@
 [submodule "src/Calibration"]
 	path = src/Calibration
 	url = https://github.com/emcaruso/Calibration.git
+[submodule "src/MitsubaRenderer"]
+	path = src/MitsubaRenderer
+	url = https://github.com/emcaruso/MitsubaRenderer.git
