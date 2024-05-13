@@ -2,6 +2,7 @@
 paths:
   calib_yaml: "${oc.env:YAML_DIR}/calibration.yaml"
   # save_dir: "../data/light_calib_data/${save_name}"
+  light_calib_dir: "${oc.env:YAML_DIR}/../src/LightCalib"
   save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/light_calib_data"
 
 save_name: "cvl1"

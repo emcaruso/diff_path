@@ -2,16 +2,20 @@ interactive: True
 
 paths:
   config_dir: "${oc.env:YAML_DIR}"
+  calib_dir: "${paths.config_dir}/../src/Calibration" 
+
+  # input
   scene_dir: "${paths.config_dir}/../data/scenes/${env}/${dataset_name}"
+  charuco_board_path: "${paths.calib_dir}/data/charuco_boards/${charuco_board}" 
+  sensor_path: "${paths.calib_dir}/data/sensors/${sensor}.yml" 
+  aruco_struct: "${paths.config_dir}/aruco_struct.yaml" 
+
+  # output
   save_dir: "${paths.config_dir}/../data/${save_name}/calib_data" 
   save_scene: "${paths.save_dir}/scene" 
   out_dir: "${paths.save_dir}/output" 
   in_dir: "${paths.save_dir}/input" 
   results_final_dir: "${global_calibration.paths.out_dir}"
-  charuco_board_path: "${paths.calib_dir}/data/charuco_boards/${charuco_board}" 
-  sensor_path: "${paths.calib_dir}/data/sensors/${sensor}.yml" 
-  calib_dir: "${paths.config_dir}/../src/Calibration" 
-  aruco_struct: "${paths.config_dir}/aruco_struct.yaml" 
 
 save_name: "cvl1"
 # charuco_board: "charuco_7x5_3boards.yml"
@@ -39,7 +43,7 @@ intrinsics_calibration:
     charuco_board_path: "${paths.charuco_board_path}"
     sensor_path: "${paths.sensor_path}"
   calibration:
-    do: False
+    do: True
     fix_intr: False
     intr_start: "None"
 
