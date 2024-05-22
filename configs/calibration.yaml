@@ -1,5 +1,3 @@
-interactive: True
-
 paths:
   config_dir: "${oc.env:YAML_DIR}"
   calib_dir: "${paths.config_dir}/../src/Calibration" 
@@ -12,14 +10,15 @@ paths:
 
   # output
   save_dir: "${paths.config_dir}/../data/${save_name}/calib_data" 
-  save_scene: "${paths.save_dir}/scene" 
-  out_dir: "${paths.save_dir}/output" 
-  in_dir: "${paths.save_dir}/input" 
-  results_final_dir: "${global_calibration.paths.out_dir}"
+  save_scene: "${paths.save_dir}/scene" # DON'T CHANGE!
+  out_dir: "${paths.save_dir}/output" # DON'T CHANGE!
+  in_dir: "${paths.save_dir}/input" # DON'T CHANGE!
+  results_final_dir: "${global_calibration.paths.out_dir}" # DON'T CHANGE!
 
 save_name: "cvl1"
 # charuco_board: "charuco_7x5_3boards.yml"
 charuco_board: "charuco_11x9_cvl.yml"
+# charuco_board: "charuco_9x11_cvl_thin.yml"
 sensor: "Basler_ace2_a2A1920"
 
 # env: "Blender"
@@ -36,10 +35,11 @@ intrinsics_calibration:
     per_cam: True
     automatic: True
     dist_thresh_auto: 10000 # if automaic
+    exposure_time: 5000 
   paths:
-    out_dir: "${paths.out_dir}/intrinsics" 
-    in_dir: "${paths.in_dir}/intrinsics" 
-    cache_dir: "Data/intrinsics"
+    out_dir: "${paths.out_dir}/intrinsics" # DON'T CHANGE!
+    in_dir: "${paths.in_dir}/intrinsics"  # DON'T CHANGE!
+    cache_dir: "Data/intrinsics" # DON'T CHANGE!
     charuco_board_path: "${paths.charuco_board_path}"
     sensor_path: "${paths.sensor_path}"
   calibration:
@@ -49,22 +49,23 @@ intrinsics_calibration:
 
 global_calibration:
   name: "Global calibration"
-  do: False
+  do: True
   generate_data:
-    do: True
+    do: False
     per_cam: False
     automatic: False
     dist_thresh_auto: 10000 # if automaic
+    exposure_time: 10000 
   paths:
-    out_dir: "${paths.out_dir}/global" 
-    in_dir: "${paths.in_dir}/global" 
-    cache_dir: "Data/global"
+    out_dir: "${paths.out_dir}/global" # DON'T CHANGE!
+    in_dir: "${paths.in_dir}/global" # DON'T CHANGE!
+    cache_dir: "Data/global" # DON'T CHANGE!
     charuco_board_path: "${paths.charuco_board_path}"
     sensor_path: "${paths.sensor_path}"
   calibration:
     do: True
     fix_intr: True
-    intr_start: "${paths.out_dir}/intrinsics/calibrated_cameras_data.yml"
+    intr_start: "${paths.out_dir}/intrinsics/calibrated_cameras_data.yml" # DON'T CHANGE!
     # intr_start: "None"
 
 
@@ -73,4 +74,4 @@ blend_dir: ""
 blend_dataset: ""
 no_render: True
 dist_thresh_auto: 10000
-
+interactive: True

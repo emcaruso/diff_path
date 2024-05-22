@@ -1,6 +1,8 @@
 
 paths:
-  calib_yaml: "${oc.env:YAML_DIR}/calibration.yaml"
+  # calib_yaml: "${oc.env:YAML_DIR}/calibration.yaml"
+  calib_data_dir: "${oc.env:YAML_DIR}/../data/${save_name}/calib_data" 
+  leds_yaml: "${oc.env:YAML_DIR}/leds.yaml"
   # save_dir: "../data/light_calib_data/${save_name}"
   light_calib_dir: "${oc.env:YAML_DIR}/../src/LightCalib"
   save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/light_calib_data"
@@ -25,6 +27,9 @@ tuning:
   batch_size: 20
   n_tests: 10
   std_thresh: 0.5
+
+# save_imgs: True
+led_intensity: 0.0001
 
 plane_estimator:
   exposure_time: 40000

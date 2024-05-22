@@ -3,8 +3,8 @@ paths:
   pose_estimator_dir: "${oc.env:YAML_DIR}/../src/ConveyorPoseEstimator"
 
   # input
-  data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/light_calib_data" # data folder where there are input conditions (calibration data)
-  # data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/calib_data" # data folder where there are input conditions (calibration data)
+  # data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/light_calib_data" # data folder where there are input conditions (calibration data)
+  data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/calib_data" # data folder where there are input conditions (calibration data)
   blender_dir: "${paths.data_in_dir}/scene" # scene folder where there is the blender scene relative to calibration data
 
   # output
@@ -24,14 +24,14 @@ render_tables:
     location: [0, 0, 0]
     euler: [0, 0, 0]
   ranges:
-    x: [-0.2, 0.2]
+    x: [-0.25, 0.25]
     y: [-0., 0.]
     a: [-0., 0.]
     # x: [-0.008, 0.0008]
     # y: [-0.008, 0.0008]
     # a: [-0., 0.]
   intervals:
-    x: 256
+    x: 512
     y: 0
     a: 0
     # x: 16
@@ -40,14 +40,13 @@ render_tables:
   threshold: 0.2
   cam_collection: "estimated_poses"
   obj_name: "cj"
-  obj_scale: 0.99
+  obj_scale: 0.999
   # obj_scale: 1
 
 generate_bin:
   do: True
 
 pose_estimator:
-  signal_period: 500000
-  score_thresh: 0.2
+  score_thresh: 0.015
   clamp_thresh: 0.02
   scale_fact: 1

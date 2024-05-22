@@ -1,0 +1,55 @@
+paths:
+  config_dir: "${oc.env:YAML_DIR}"
+  # pose_estimator_dir: "${paths.config_dir}/../src/ConveyorPoseEstimator" 
+  # pose_estimator_cfg: "${paths.config_dir}/pose_estimator.yaml" 
+
+  # input
+  # calib_data_dir: "${paths.config_dir}/../data/${save_name}/light_calib_data"
+  calib_data_dir: "${paths.config_dir}/../data/${save_name}/calib_data"
+  pose_estimator_data_dir: "${paths.config_dir}/../data/${save_name}/pose_estimator_data"
+  led_cfg_dir: "${paths.config_dir}/leds.yaml"
+  blender_dir: "${paths.calib_data_dir}/scene" # scene folder where there is the blender scene relative to calibration data
+
+  save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/collector_data"
+  save_scene_dir: "${paths.save_dir}/scene"
+  mesh_dir: "${paths.save_dir}/mesh"
+  captured_dir: "${paths.save_dir}/captured"
+  # light_data_dir: "${paths.config_dir}/../data/${dataset_name}/light_calib_data"
+  # calib_data_dir: "${paths.config_dir}/../data/${dataset_name}/calib_data"
+
+save_name: "cvl1"
+
+
+# basler:
+#   signal_period: 500000
+
+collect_manual:
+  # signal_period: 100000
+  signal_period: 500000
+  #
+collect_track:
+  signal_period: 150000
+  range_half: 16
+
+collect_sequence:
+  sequence: # list of couples (light_id, value on x axis)
+    # - [ 0, -1 ]
+    # - [ 1, -1 ]
+    # - [ 0, -1 ]
+    # - [ 1, -0.30 ]
+    # - [ 0, -0.25 ]
+    # - [ 1, -0.20 ]
+    # - [ 0, -0.15 ]
+    # - [ 1, -0.10 ]
+    # - [ 0, -0.05 ]
+    # - [ 1,  0.00 ]
+    # - [ 0,  0.05 ]
+    # - [ 1,  0.10 ]
+    # - [ 0,  0.15 ]
+    # - [ 1,  0.20 ]
+    # - [ 0,  0.25 ]
+    # - [ 1,  0.30 ]
+    # - [ 0,  0.30 ]
+
+
+
