@@ -248,7 +248,7 @@ class Collector():
 
     def collect_while_tracking( self, manual=True, debug=False ) :
         # collect
-        self.fe.start_cams(signal_period=self.cfg.collect_track.signal_period)
+        self.fe.start_cams(signal_period=self.cfg.collect_track.signal_period, exposure_time=self.cfg.collect_track.exposure_time)
         image_list = []
         image_show_list = []
         pose_list = []

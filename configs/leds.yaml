@@ -15,7 +15,6 @@ leds:
     channel: 2
     intensity: 0
     info: {"position":"top-right", "cable_id": "W105"}
-
   led_3:
     channel: 4
     intensity: 0
@@ -28,7 +27,8 @@ leds:
     channel: 6
     intensity: 0
     info: {"position":"top-left", "cable_id": "W106"}
+
 test:
   intensity: 0.1
   time: 0.1
-  n: 5
+  n: 1

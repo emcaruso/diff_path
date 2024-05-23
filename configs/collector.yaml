@@ -26,16 +26,17 @@ save_name: "cvl1"
 collect_manual:
   # signal_period: 100000
   signal_period: 500000
+  exposure_time: 1000
   #
 collect_track:
-  signal_period: 150000
+  signal_period: 100000
+  exposure_time: 5000
   range_half: 16
 
 collect_sequence:
   sequence: # list of couples (light_id, value on x axis)
-    # - [ 0, -1 ]
-    # - [ 1, -1 ]
-    # - [ 0, -1 ]
+    - [ 0, -0.23 ]
+    #
     # - [ 1, -0.30 ]
     # - [ 0, -0.25 ]
     # - [ 1, -0.20 ]
