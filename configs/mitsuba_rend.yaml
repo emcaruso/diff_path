@@ -2,10 +2,16 @@
 paths:
 
   # input
-  data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/pose_estimator_data"
+  # data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/pose_estimator_data"
+  # xml_path: "${paths.data_in_dir}/scene/mitsuba_scene/scene.xml"
+
+  collector_dir: "${oc.env:YAML_DIR}/../src/Collector"
+  data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/collector_data"
   xml_path: "${paths.data_in_dir}/scene/mitsuba_scene/scene.xml"
   pose_estimator_dir: "${oc.env:YAML_DIR}/../src/ConveyorPoseEstimator"
   pose_estimator_config: "${oc.env:YAML_DIR}/../configs/pose_estimator.yaml"
+  out_dir: "${oc.env:YAML_DIR}/../data/${save_name}/solver_data"
+
 
 
 
@@ -14,16 +20,38 @@ save_name: "cvl1"
 renderer:
   # variant: "scalar_rgb"
   # variant: "llvm_ad_rgb"
-  spp: 32
   variant: "cuda_ad_rgb"
+  spp: 1
+  spp_max: 1
+  spp_max_inference: 1
   seed: 666
-  max_depth: 8
-  rr_depth: 5
+  max_depth: 2
+  rr_depth: 18
+  obj_name: "${optim.obj_name}"
 
 
 
 optim:
   obj_name: "elm__2"
+  parameters:
+    # - ["${optim.obj_name}.bsdf.reflectance.value", [0,1] ]
+    - ["${optim.obj_name}.bsdf.brdf_0.base_color.data", [0,1] ]
+    # - ["${optim.obj_name}.bsdf.brdf_0.roughness.data", [0,1] ]
+    - ["${optim.obj_name}.bsdf.brdf_0.metallic.value", [0,1] ]
+    - ["${optim.obj_name}.bsdf.brdf_0.roughness.value", [0,1] ]
+    # - ["elm__85.intensity.value", [0,10] ]
+  lr: 0.1
+
+  # multi
+  # epochs: 30
+  # early_stop_thresh: [ 0.001, 0.001, 0.001, 0.001, 0.001 ]
+  # res: [256, 512, 1024, 2048, 4096]
+  
+  # single
+  epochs: 100
+  early_stop_thresh: [  0.000 ]
+  res: [ 4096]
+
 
 
 

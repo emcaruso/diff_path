@@ -15,18 +15,18 @@ leds:
     channel: 2
     intensity: 0
     info: {"position":"top-right", "cable_id": "W105"}
-  led_3:
-    channel: 4
-    intensity: 0
-    info: {"position":"near-bottom-left", "cable_id": "W108"}
-  led_4:
-    channel: 5
-    intensity: 0
-    info: {"position":"far-bottom-left", "cable_id": "W107"}
-  led_5:
-    channel: 6
-    intensity: 0
-    info: {"position":"top-left", "cable_id": "W106"}
+  # led_3:
+  #   channel: 4
+  #   intensity: 0
+  #   info: {"position":"near-bottom-left", "cable_id": "W108"}
+  # led_4:
+  #   channel: 5
+  #   intensity: 0
+  #   info: {"position":"far-bottom-left", "cable_id": "W107"}
+  # led_5:
+  #   channel: 6
+  #   intensity: 0
+    # info: {"position":"top-left", "cable_id": "W106"}
 
 test:
   intensity: 0.1

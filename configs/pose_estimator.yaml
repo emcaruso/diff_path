@@ -31,7 +31,7 @@ render_tables:
     # y: [-0.008, 0.0008]
     # a: [-0., 0.]
   intervals:
-    x: 512
+    x: 1024
     y: 0
     a: 0
     # x: 16
@@ -40,8 +40,9 @@ render_tables:
   threshold: 0.2
   cam_collection: "estimated_poses"
   obj_name: "cj"
-  obj_scale: 0.999
-  # obj_scale: 1
+  offset_z: 0.01
+  obj_scale: 1
+  # obj_scale: 0.995
 
 generate_bin:
   do: True
