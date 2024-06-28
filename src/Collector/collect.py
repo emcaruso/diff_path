@@ -45,14 +45,25 @@ class Collector():
 
     def show_references( self ):
         self.fe.start_cams()
-        for i in range(3):
+        idx = 0
+        while True:
             while True:
                 images = self.fe.grab_multiple_cams()
                 images_undist = [ self.cams[i].intr.undistort_image(images[i]) for i in range(len(images)) ]
-                images_overlap = self.pe.overlap_pose_from_idx( images_undist, i)
+                images_overlap = self.pe.overlap_pose_from_idx( images_undist, idx)
                 key = Image.show_multiple_images(images_overlap, wk=1)
                 if key==ord('q'):
-                    break
+                    return True
+                if key==ord('l'):
+                    idx += 1
+                if key==ord('k'):
+                    idx += 10
+                if key==ord('j'):
+                    idx -= 10
+                if key==ord('h'):
+                    idx -= 1
+                idx = min(idx, self.pe.n_poses-1)
+                idx = max(idx, 0)
 
     # def show_references( self ):
     #     self.fe.start_cams()
@@ -178,6 +189,8 @@ class Collector():
         if key==ord('q'):
             return False
         else:
+
+
             x = pose.location()[0]
             x_ref = sequence[0][1]
 
@@ -185,7 +198,7 @@ class Collector():
                 light_id = sequence[0][0]
                 sequence.pop(0)
                 images = self.capture_frames_with_led( light_id)
-
+            
                 # capture frame and switch led
                 images = self.fe.grab_multiple_cams()
                 self.lc.led_off(light_id)
