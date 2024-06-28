@@ -10,6 +10,8 @@ from utils_ema.objects import Object
 from utils_ema.config_utils import load_yaml
 from utils_ema.plot import plotter
 from utils_ema.general import load_class_from_path
+from utils_ema.mitsuba_scene import MitsubaScene
+
 from omegaconf import OmegaConf
 from pathlib import Path
 
@@ -25,31 +27,50 @@ class CollectorLoader():
         # paths
         self.frames_out = os.path.join(self.cfg.paths.save_dir, "captured")
         self.mesh_dir = os.path.join(self.cfg.paths.save_dir, "mesh")
-        self.frame_dirs = self.get_frame_dirs()
+        # self.frame_dirs = self.get_frame_dirs()
 
 
 
-    def get_frame_dirs(self):
-        frame_folders = list(os.listdir(self.frames_out))
-        frame_folders.sort()
-        frame_dirs = [ os.path.join(self.frames_out,ff) for ff in frame_folders ]
-        for ff in frame_dirs: assert(os.path.isdir(ff))
-        return frame_dirs
+    # def get_frame_dirs(self):
+    #     frame_folders = list(os.listdir(self.frames_out))
+    #     frame_folders.sort()
+    #     frame_dirs = [ os.path.join(self.frames_out,ff) for ff in frame_folders ]
+    #     print(frame_dirs)
+    #     for ff in frame_dirs: assert(os.path.isdir(ff))
+    #     return frame_dirs
 
     def get_poses(self):
+        pose_path = os.path.join(self.cfg.paths.captured_dir,"poses.npy")
+
+        if not os.path.exists(pose_path): raise ValueError(f"{pose_path} not valid path!")
+
+        pose_data = np.load(pose_path)
+
         poses = {}
-        for i, ff in enumerate(self.frame_dirs):
-            pose_path = os.path.join(ff,"pose.npy")
-            pose = Pose(T=torch.from_numpy(np.load(pose_path)))
-            poses[os.path.basename(ff)] = pose
+        for i, p in enumerate(pose_data):
+            pose = Pose(T=torch.from_numpy(p))
+            poses["frame_"+str(i).zfill(3)] = pose
+
         return poses
 
     def get_lights_data(self):
+        leds_path = os.path.join(self.cfg.paths.captured_dir,"leds.npy")
+
+        if not os.path.exists(leds_path): raise ValueError(f"{leds_path} not valid path!")
+
+        lights_mat = np.load(leds_path, allow_pickle=True)
+
         lights_data = []
-        for i, ff in enumerate(self.frame_dirs):
-            light_path = os.path.join(ff,"led.npy")
-            d = np.load(light_path, allow_pickle=True)
-            lights_data.append(d)
+        for i, l in enumerate(lights_mat):
+            lights_data.append(l)
+            # pose = Pose(T=torch.from_numpy(l))
+            # poses["frame_"+str(i).zfill(3)] = pose
+
+        # for i, ff in enumerate(self.frame_dirs):
+        #     light_path = os.path.join(ff,"led.npy")
+        #     d = np.load(light_path, allow_pickle=True)
+        #     lights_data.append(d)
+
         return lights_data
 
 
@@ -118,24 +139,25 @@ class CollectorLoader():
         poses = list(self.get_poses().values())
         n_poses = len(poses)
 
+
         # extend cameras
         cams = scene.get_cams()
         if cams is not None:
             new_cams = []
-            imgs_path = self.cfg.paths.captured_dir
+            imgs_path = os.path.join(self.cfg.paths.captured_dir, "sequences")
             for i in range(n_poses):
                 new_cams.append([])
-                img_path_ = os.path.join(imgs_path, "frame_"+str(i).zfill(3), "undist")
                 for j, cam in enumerate(cams):
-                    img_path = os.path.join(img_path_, "Cam_"+str(j).zfill(3)+".png")
+                    img_path = os.path.join(imgs_path, "Cam_"+str(j).zfill(3),str(i).zfill(3)+".png")
                     new_cam = cam.clone(same_intr=True, same_pose=True, image_paths = {"rgb":img_path})
+                    new_cam.load_images()
                     new_cams[-1].append(new_cam)
             scene.cams = new_cams
 
         # extend lights
         lights_data = self.get_lights_data()
         lights = scene.get_lights()
-        if lights_data is not None:
+        if lights is not None:
             new_lights = []
             for i in range(n_poses):
                 new_lights.append([])
@@ -153,11 +175,15 @@ class CollectorLoader():
             objects.append( [Object(mesh=mesh_path, pose=pose, device=scene.device)] )
         scene.objects = objects
 
+        # mitsuba_scene
+        scene.set_mitsuba_scene(self.get_mitsuba_scene())
+
         return scene
         
 
     def get_mitsuba_scene(self):
         # scene_mitsuba = self.data_loader.get_mitsuba_scene()
+        print(self.cfg.paths)
         xml_path = os.path.join(self.cfg.paths.save_mitsuba_scene, "scene.xml")
         scene_mitsuba = MitsubaScene(xml_path = xml_path)
         return scene_mitsuba
@@ -167,9 +193,9 @@ if __name__=="__main__":
     cl = CollectorLoader(cfg_path)
     s = cl.get_scene()
 
-    for l in s.get_lights():
-        for li in l:
-            print(li.intensity)
+    # for l in s.get_lights():
+    #     for li in l:
+    #         print(li.intensity)
 
 
     # fd = cl.get_poses()

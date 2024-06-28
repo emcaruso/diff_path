@@ -2,6 +2,7 @@ import os, sys
 import numpy as np
 import time
 import shutil
+from omegaconf import OmegaConf
 from utils_ema.config_utils import load_yaml
 from utils_ema.basler_utils import frame_extractor
 from utils_ema.image import Image
@@ -17,6 +18,7 @@ led_cfg_path = os.path.join(script_dir, "..", "..", "configs", "leds.yaml")
 class Collector():
 
     def __init__(self):
+        self.cfg_path = cfg_path
         self.cfg = load_yaml(cfg_path)
         self.fe = frame_extractor()
 
@@ -101,39 +103,40 @@ class Collector():
 
 
 
-    def sequence_grab( self, images_undist, imgs_show, pose_list, image_list, image_show_list, led_list, pose, sequence, rang ):
-        key = Image.show_multiple_images(imgs_show, wk=1)
-        if key==ord('q'):
-            return False
-        else:
-            x = pose.location()[0]
-            x_ref = sequence[0][1]
+    # def sequence_grab( self, images_undist, imgs_show, pose_list, image_list, image_show_list, led_list, pose, sequence, rang ):
+    #     key = Image.show_multiple_images(imgs_show, wk=1)
+    #     if key==ord('q'):
+    #         return False
+    #     else:
+    #         x = pose.location()[0]
+    #         x_ref = sequence[0][1]
 
-            if x>=x_ref:
-                light_id = sequence[0][0]
-                sequence.pop(0)
-                images = self.capture_frames_with_led( light_id)
-                images_undist = [ self.cams[i].intr.undistort_image(images[i]) for i in range(len(images)) ]
-                imgs_show, pose, _, _ = self.pe.overlap_estimated_pose(images_undist, rang=rang)
-                pose_list.append(pose)
-                image_list.append(images_undist)
-                image_show_list.append(imgs_show)
+    #         if x>=x_ref:
+    #             light_id = sequence[0][0]
+    #             sequence.pop(0)
+    #             images = self.capture_frames_with_led( light_id)
+    #             images_undist = [ self.cams[i].intr.undistort_image(images[i]) for i in range(len(images)) ]
+    #             imgs_show, pose, _, _ = self.pe.overlap_estimated_pose(images_undist, rang=rang)
+    #             pose_list.append(pose)
+    #             image_list.append(images_undist)
+    #             image_show_list.append(imgs_show)
 
-                led_list.append([])
-                for l_id in range(len(self.lights)):
-                    intensity = (l_id==light_id)*self.lc.ampere_default
-                    led_list[-1].append({"light_id":l_id, "intensity":intensity, "name":self.lights[l_id].name})
+    #             led_list.append([])
+    #             for l_id in range(len(self.lights)):
+    #                 intensity = (l_id==light_id)*self.lc.ampere_default
+    #                 led_list[-1].append({"light_id":l_id, "intensity":intensity, "name":self.lights[l_id].name})
 
-                # led_list.append({"light_id":light_id, "intensity":self.lc.ampere_default})
-                print(f"collected {len(image_list)} images, led channel: {self.lights[light_id].channel}, x: {x}, x_ref: {x_ref}")
+    #             # led_list.append({"light_id":light_id, "intensity":self.lc.ampere_default})
+    #             print(f"collected {len(image_list)} images, led channel: {self.lights[light_id].channel}, x: {x}, x_ref: {x_ref}")
 
-                if len(sequence)==0:
-                    return False
+    #             if len(sequence)==0:
+    #                 return False
 
-            return True
+    #         return True
 
     def save_data(self, pose_list, led_list):
         # SAVE
+
         # save data
         out_dir = self.cfg.paths.captured_dir
         np.save(os.path.join(out_dir,"leds.npy"), led_list)
@@ -144,6 +147,9 @@ class Collector():
         # # save blender
         self.save_blender()
 
+        # save cfg
+        cfg_path_out = os.path.join(self.cfg.paths.save_dir, "config.yaml")
+        OmegaConf.save(self.cfg, cfg_path_out)
     
     # def save_data(self, pose_list, image_list, led_list, image_show_list):
     #     # SAVE
@@ -179,6 +185,12 @@ class Collector():
                 light_id = sequence[0][0]
                 sequence.pop(0)
                 images = self.capture_frames_with_led( light_id)
+
+                # capture frame and switch led
+                images = self.fe.grab_multiple_cams()
+                self.lc.led_off(light_id)
+                if sequence: self.lc.led_on(sequence[0][0])
+
                 images_undist = [ self.cams[i].intr.undistort_image(images[i]) for i in range(len(images)) ]
                 imgs_show, pose, _, _ = self.pe.overlap_estimated_pose(images_undist, rang=rang)
                 pose_list.append(pose)
@@ -274,12 +286,16 @@ class Collector():
                     break
             else:
                 if sequence is None: sequence = self.cfg.collect_sequence.sequence
+                if sequence is None: raise ValueError("sequence in config file is empty")
+                self.lc.led_on(sequence[0][0])
                 f = self.sequence_grab( images_undist, imgs_show, pose_list, image_list, image_show_list, led_list, pose, sequence, rang )
                 if not f:
                     cv2.destroyAllWindows()
                     break
 
 
+        # save data loader
+        
         self.save_images(image_list, image_show_list)
         self.save_data(pose_list, led_list)
 
@@ -297,6 +313,6 @@ if __name__=="__main__":
     collector = Collector()
     # collector.show_references()
     # collector.collect_manual()
-    # collector.collect_while_tracking(manual=True)
     collector.test_leds()
     collector.collect_while_tracking(manual=False)
+    # collector.collect_while_tracking(manual=True)

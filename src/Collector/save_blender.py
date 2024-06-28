@@ -69,6 +69,9 @@ for i, cam in enumerate(cams):
     img_user.frame_duration = len(list(os.listdir(directory)))
 
 
+set_collection_hide_val("Board", True, ignore_errors=True)
+
+
 # # Update scene
 # bpy.context.scene.frame_start = start_frame
 # bpy.context.scene.frame_end = end_frame
