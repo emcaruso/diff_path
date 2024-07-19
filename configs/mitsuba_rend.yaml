@@ -21,25 +21,34 @@ renderer:
   # variant: "scalar_rgb"
   # variant: "llvm_ad_rgb"
   variant: "cuda_ad_rgb"
-  spp: 1
+  spp: 12
   spp_max: 1
   spp_max_inference: 1
   seed: 666
   max_depth: 2
   rr_depth: 18
-  obj_name: "${optim.obj_name}"
+  obj_names: ["elm__2"]
 
 
 
 optim:
-  obj_name: "elm__2"
   parameters:
-    # - ["${optim.obj_name}.bsdf.reflectance.value", [0,1] ]
-    - ["${optim.obj_name}.bsdf.brdf_0.base_color.data", [0,1] ]
-    # - ["${optim.obj_name}.bsdf.brdf_0.roughness.data", [0,1] ]
-    - ["${optim.obj_name}.bsdf.brdf_0.metallic.value", [0,1] ]
-    - ["${optim.obj_name}.bsdf.brdf_0.roughness.value", [0,1] ]
+    # - ["$elm__2.bsdf.reflectance.value", [0,1] ]
+    - ["$elm__2.bsdf.brdf_0.base_color.data", [[0,0.999], 3] ]
+    # - ["${optim.obj_name}.bsdf.brdf_0.roughness.data", [[0,0.999], 1]]
+    # - ["${optim.obj_name}.bsdf.brdf_0.metallic.value", [[0,0.999], 1]]
+    - ["elm__6.to_world", [null, null]]
+    # - ["elm__7.to_world", [null, null]]
+    # - ["elm__6.x_fov", [null, null]]
+    # - ["elm__7.x_fov", [null, null]]
+    # - ["elm__9.position", [null, null]]
+    # - ["${optim.obj_name}.bsdf.brdf_0.metallic.value", [[0,0], null]]
+    # - ["${optim.obj_name}.bsdf.brdf_0.roughness.value", [0,1] ]
     # - ["elm__85.intensity.value", [0,10] ]
+    #elm__6.to_world
+  params_extra:
+    - [["y","z","e2"], "shared", ["elm__2","elm__3"]]
+    - [["x"], "singular", ["elm__2","elm__3"]]
   lr: 0.1
 
   # multi
@@ -48,9 +57,9 @@ optim:
   # res: [256, 512, 1024, 2048, 4096]
   
   # single
-  epochs: 100
-  early_stop_thresh: [  0.000 ]
-  res: [ 4096]
+  epochs: 60
+  early_stop_thresh: [  0.00001 ]
+  res: [ 4096 ]
 
 
 

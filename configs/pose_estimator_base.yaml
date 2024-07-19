@@ -24,23 +24,22 @@ render_tables:
     location: [0, 0, 0]
     euler: [0, 0, 0]
   ranges:
-    x: [-0.25, 0.25]
-    y: [-0., 0.]
-    a: [-0., 0.]
-    # x: [-0.008, 0.0008]
-    # y: [-0.008, 0.0008]
-    # a: [-0., 0.]
+    x: null
+    y: [-0.008, 0.008]
+    z: [-0.004, 0.004]
+    e0: null
+    e1: null
+    e2: [-0.02, 0.02]
   intervals:
-    x: 1024
-    y: 0
-    a: 0
-    # x: 16
-    # y: 16
-    # a: 0
+    x: null
+    y: 16
+    z: 8
+    e0: null
+    e1: null
+    e2: 16
   threshold: 0.2
   cam_collection: "estimated_poses"
   obj_name: "cj"
-  offset_z: 0.01
   obj_scale: 1
   # obj_scale: 0.995
 
@@ -48,6 +47,7 @@ generate_bin:
   do: True
 
 pose_estimator:
-  score_thresh: 0.015
+  score_thresh: 0.01
+  # score_thresh: 0.015
   clamp_thresh: 0.02
   scale_fact: 1

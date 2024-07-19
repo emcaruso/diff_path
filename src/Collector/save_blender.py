@@ -8,31 +8,35 @@ from pathlib import Path
 
 path = sys.argv[-1]
 
+cfg = load_yaml(os.path.join(path,"config.yaml"))
+obj_names = cfg.objects
+
 # dirs
 mesh_dir = os.path.join(path,"mesh")
 captured_dir = os.path.join(path, "captured")
 mitsuba_dir = os.path.join(os.path.join(path, "scene", "mitsuba_scene"))
 
 # load mesh
-obj_names = [ Path(f).stem for f in os.listdir(mesh_dir) if Path(f).suffix==".obj"]
-if len(obj_names)!=1: raise ValueError("Multiple meshes in {mesh_dir}")
-obj = bpy.data.objects[obj_names[0]]
+# obj_names = [ Path(f).stem for f in os.listdir(mesh_dir) if Path(f).suffix==".obj"]
+# if len(obj_names)!=1: raise ValueError("Multiple meshes in {mesh_dir}")
+for obj_name in obj_names:
+    obj = bpy.data.objects[obj_name]
 
-# load poses and leds
-npy_poses = np.load(os.path.join(captured_dir,"poses.npy"), allow_pickle=True)
-poses = [ Pose(T=torch.from_numpy(T)) for T in npy_poses ]
-leds = np.load(os.path.join(captured_dir,"leds.npy"), allow_pickle=True)
+    # load poses and leds
+    npy_poses = np.load(os.path.join(captured_dir,"poses.npy"), allow_pickle=True)
+    poses = [ Pose(T=torch.from_numpy(T)) for T in npy_poses ]
+    leds = np.load(os.path.join(captured_dir,"leds.npy"), allow_pickle=True)
 
-clear_animation_data(obj)
-frames_folder = [ os.path.join(captured_dir,d) for d in list(os.listdir(captured_dir)) if os.path.isdir(os.path.join(captured_dir,d))]
-frames_folder.sort()
-n_frames = len(frames_folder)
+    clear_animation_data(obj)
+    frames_folder = [ os.path.join(captured_dir,d) for d in list(os.listdir(captured_dir)) if os.path.isdir(os.path.join(captured_dir,d))]
+    frames_folder.sort()
+    n_frames = len(frames_folder)
 
-# set obj keyframes
-obj.keyframe_insert(data_path="location", frame=0)
-for i, pose in enumerate(poses):
-    set_object_pose(obj, pose)
-    obj.keyframe_insert(data_path="location", frame=i+1)
+    # set obj keyframes
+    obj.keyframe_insert(data_path="location", frame=0)
+    for i, pose in enumerate(poses):
+        set_object_pose(obj, pose)
+        obj.keyframe_insert(data_path="location", frame=i+1)
 
 # set light keyframes
 # for each light

@@ -51,9 +51,9 @@ global_calibration:
   name: "Global calibration"
   do: True
   generate_data:
-    do: True
+    do: False
     per_cam: False
-    automatic: True
+    automatic: False
     dist_thresh_auto: 10000 # if automaic
     exposure_time: 5000 
   paths:
