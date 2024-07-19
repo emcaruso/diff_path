@@ -1,0 +1,53 @@
+paths:
+  config_dir: "${oc.env:YAML_DIR}"
+  pose_estimator_dir: "${oc.env:YAML_DIR}/../src/ConveyorPoseEstimator"
+
+  # input
+  # data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/light_calib_data" # data folder where there are input conditions (calibration data)
+  data_in_dir: "${oc.env:YAML_DIR}/../data/${save_name}/calib_data" # data folder where there are input conditions (calibration data)
+  blender_dir: "${paths.data_in_dir}/scene" # scene folder where there is the blender scene relative to calibration data
+
+  # output
+  save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/pose_estimator_data"
+  save_scene_dir: "${paths.save_dir}/scene"
+  save_mitsuba_scene: "${paths.save_scene_dir}/mitsuba_scene"
+  tables_dir: "${paths.save_dir}/tables"
+  ref_dir: "${paths.save_dir}/reference"
+  mesh_dir: "${paths.save_dir}/mesh"
+  captured_dir: "${paths.save_dir}/captured"
+
+save_name: "cvl1"
+
+render_tables:
+  do: True
+  reference:
+    location: [0, 0, 0]
+    euler: [0, 0, 0]
+  ranges:
+    x: [-0.25, 0.25]
+    y: null
+    z: null
+    e0: null
+    e1: null
+    e2: null
+  intervals:
+    x: 2048
+    y: null
+    z: null
+    e0: null
+    e1: null
+    e2: null
+  threshold: 0.2
+  cam_collection: "estimated_poses"
+  obj_name: "cj"
+  obj_scale: 1
+  # obj_scale: 0.995
+
+generate_bin:
+  do: True
+
+pose_estimator:
+  score_thresh: 0.01
+  # score_thresh: 0.015
+  clamp_thresh: 0.02
+  scale_fact: 1

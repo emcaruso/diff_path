@@ -13,3 +13,6 @@
 [submodule "src/MitsubaRenderer"]
 	path = src/MitsubaRenderer
 	url = https://github.com/emcaruso/MitsubaRenderer.git
+[submodule "src/ColorCorrection"]
+	path = src/ColorCorrection
+	url = https://github.com/emcaruso/ColorCorrection.git

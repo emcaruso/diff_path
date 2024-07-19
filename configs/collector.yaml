@@ -5,6 +5,7 @@ paths:
 
   # input
   calib_data_dir: "${paths.config_dir}/../data/${save_name}/light_calib_data"
+  color_correction_data_dir: "${paths.config_dir}/../data/${save_name}/color_correction_data"
   # calib_data_dir: "${paths.config_dir}/../data/${save_name}/calib_data"
   pose_estimator_data_dir: "${paths.config_dir}/../data/${save_name}/pose_estimator_data"
   led_cfg_dir: "${paths.config_dir}/leds.yaml"
@@ -20,32 +21,39 @@ paths:
 
 save_name: "cvl1"
 
+objects:
+  - "cj_machined"
+  - "cj_unmachined"
 
-# basler:
-#   signal_period: 500000
+
+normalization:
+  color_correction: True
+  exposure_time_ref: 10000
+
+led_amp: 1.2
 
 collect_manual:
   # signal_period: 100000
   signal_period: 500000
   exposure_time: 1000
-  #
+
 collect_track:
   signal_period: 100000
-  exposure_time: 5000
+  exposure_time: 7500
   range_half: 40
 
 collect_sequence:
   sequence: # list of couples (light_id, value on x axis)
-    # - [ 0, -0.25 ]
-    # - [ 0, -0.25 ]
+    - [ 0, -0.25 ]
+    - [ 0, -0.25 ]
 
-    - [ 1, -0.15 ]
-    - [ 2, -0.10 ]
-    - [ 1, -0.05 ]
-    - [ 2,  0.00 ]
-    - [ 0,  0.05 ]
-    - [ 2,  0.10 ]
-    - [ 0,  0.15 ]
+    # - [ 1, -0.15 ]
+    # - [ 2, -0.10 ]
+    # - [ 1, -0.05 ]
+    # - [ 2,  0.00 ]
+    # - [ 0,  0.05 ]
+    # - [ 2,  0.10 ]
+    # - [ 0,  0.15 ]
 
 
 
