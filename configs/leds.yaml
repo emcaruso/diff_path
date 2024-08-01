@@ -7,7 +7,7 @@ leds:
   led_0:
     channel: 0
     intensity: 0
-    info: {"position":"near-bottom-right", "cable_id": "W112"}
+    info: {"position":"center-bottom-right", "cable_id": "W112"}
   led_1:
     channel: 1
     intensity: 0
@@ -16,6 +16,10 @@ leds:
     channel: 2
     intensity: 0
     info: {"position":"top-right", "cable_id": "W105"}
+  led_3:
+    channel: 3
+    intensity: 0
+    info: {"position":"near-bottom-right", "cable_id": "W105"}
   # led_3:
   #   channel: 4
   #   intensity: 0

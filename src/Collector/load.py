@@ -2,6 +2,7 @@ import cv2
 import torch
 import os
 from utils_ema.camera_cv import *
+from utils_ema.text import read_content, write_content
 from utils_ema.geometry_pose import *
 from utils_ema.charuco import Charuco
 from utils_ema.scene import Scene
@@ -176,10 +177,27 @@ class CollectorLoader():
         scene.objects = objects
 
         # mitsuba_scene
+        xml_path = os.path.join(self.cfg.paths.save_mitsuba_scene, "scene.xml")
+
+        self.modify_xml(xml_path, scene)
+        scene_mitsuba = MitsubaScene(xml_path = xml_path)
+
         scene.set_mitsuba_scene(self.get_mitsuba_scene())
 
         return scene
         
+    def modify_xml( self, xml_path, scene ):
+        content = read_content(xml_path)
+
+        res_list = []
+        for cam in scene.get_cams_in_frame(0):
+            res_list.append(tuple(cam.intr.resolution.tolist()))
+
+        for res in res_list:
+            content = content.replace("$resx",str(res[0]), 1)
+        for res in res_list:
+            content = content.replace("$resy",str(res[1]), 1)
+        write_content(xml_path, content)
 
     def get_mitsuba_scene(self):
         # scene_mitsuba = self.data_loader.get_mitsuba_scene()

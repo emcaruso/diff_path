@@ -17,8 +17,8 @@ paths:
 
 save_name: "cvl1"
 # charuco_board: "charuco_7x5_3boards.yml"
-charuco_board: "charuco_11x9_cvl.yml"
-# charuco_board: "charuco_9x11_cvl_thin.yml"
+# charuco_board: "charuco_11x9_cvl.yml"
+charuco_board: "charuco_9x11_cvl_thin.yml"
 sensor: "Basler_ace2_a2A1920"
 
 # env: "Blender"
@@ -29,13 +29,13 @@ dataset_name: "default"
 
 intrinsics_calibration:
   name: "Intrinsics calibration"
-  do: False
+  do: True
   generate_data:
     do: True
     per_cam: True
     automatic: True
     dist_thresh_auto: 10000 # if automaic
-    exposure_time: 5000 
+    exposure_time: 10000 
   paths:
     out_dir: "${paths.out_dir}/intrinsics" # DON'T CHANGE!
     in_dir: "${paths.in_dir}/intrinsics"  # DON'T CHANGE!
@@ -51,11 +51,11 @@ global_calibration:
   name: "Global calibration"
   do: True
   generate_data:
-    do: False
+    do: True
     per_cam: False
     automatic: False
     dist_thresh_auto: 10000 # if automaic
-    exposure_time: 5000 
+    exposure_time: 20000 
   paths:
     out_dir: "${paths.out_dir}/global" # DON'T CHANGE!
     in_dir: "${paths.in_dir}/global" # DON'T CHANGE!
