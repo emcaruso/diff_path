@@ -19,29 +19,29 @@ paths:
 save_name: "cvl1"
 
 render_tables:
-  do: False
+  do: True
   reference:
     location: [0, 0, 0]
     euler: [0, 0, 0]
   ranges:
-    x: [-0.25, 0.25]
+    x: [-0.2,0.2]
     y: null
     z: null
     e0: null
     e1: null
     e2: null
   intervals:
-    x: 2048
+    x: 3
     y: null
     z: null
     e0: null
     e1: null
     e2: null
-  threshold: 0.2
+  threshold: 0.5
   cam_collection: "estimated_poses"
-  obj_name: "cj"
+  obj_name: "cj_lowpoly"
   obj_scale: 1
-  # obj_scale: 0.995
+  # obj_scale: 0.99
 
 generate_bin:
   do: True

@@ -1,0 +1,354 @@
+import mitsuba as mi
+import os, sys
+import argparse
+from utils_ema.config_utils import load_yaml
+from utils_ema.image import Image
+from utils_ema.general import load_function_from_path, timing_decorator_print
+from utils_ema.mitsuba_scene import MitsubaScene
+from utils_ema.geometry_euler import eul
+from utils_ema.plot import plotter
+from utils_ema.torch_utils import get_device
+import drjit as dr
+import torch
+import numpy as np
+from tqdm import tqdm
+from integrator import IntegratorCustom
+import math
+
+
+
+class Renderer():
+
+    def __init__(self, cfg):
+        if mi.variant() is None: mi.set_variant(cfg.renderer.variant)
+        self.cfg = cfg
+        self.device = get_device()
+        self.load_scene()
+        self.integrator_custom = IntegratorCustom(self.scene_mitsuba)
+        self.cache_rays = {}
+        self.cache_pixels = {}
+        self.cache_data_opt = {}
+
+    def load_scene(self):
+
+        # load scene
+        sys.path.append(self.cfg.paths.collector_dir)
+        from load import CollectorLoader
+        data_loader = CollectorLoader(os.path.join(self.cfg.paths.data_in_dir,"config.yaml"))
+
+        # load scene
+        self.scene = data_loader.get_scene()
+        self.scene_mitsuba = self.scene.scene_mitsuba
+        
+        # load mitsuba scene
+        self.scene_mitsuba.set_depths(self.cfg.renderer.max_depth,self.cfg.renderer.rr_depth)
+        self.scene_mitsuba.replace_parameters(self.cfg.replace)
+        self.scene_mitsuba.load_scene()
+
+
+    def set_initial_vertices(self):
+
+        if not hasattr(self, "initial_vertices"):
+            self.initial_vertices = {}
+            for obj_name in self.cfg.renderer.obj_names:
+                # import ipdb; ipdb.set_trace()
+                self.initial_vertices[obj_name] = self.scene_mitsuba.parameters[obj_name+".vertex_positions"].copy_()
+
+
+    def render(self, camera_id):
+        img = mi.render(self.scene_mitsuba.scene, spp=self.cfg.renderer.spp, sensor=camera_id)
+        image = Image(img.numpy())
+        image.show()
+
+    def set_led_intensities(self, frame):
+        # import ipdb; ipdb.set_trace()
+        lights = self.scene.get_lights_in_frame( frame=frame )
+        led_ids = []
+        for i in range(len(lights)):
+            intensity = lights[i].intensity
+            self.scene_mitsuba.set_pointlight_intensity_from_idx( i, intensity)
+
+
+    def set_scene_frame(self, frame):
+        if self.scene_mitsuba.parameters is None: self.scene_mitsuba.get_params()
+        self.set_initial_vertices()
+
+        # # OLD
+        # # translate
+        # if hasattr(self,"previous_offset"):
+        #     for obj_name in self.cfg.renderer.obj_names:
+        #         self.scene_mitsuba.translate_obj( obj_name=obj_name, offset = -self.previous_offset)
+
+        x = self.scene.get_objects_in_frame(frame)[0].pose.location()[0]
+        offset = torch.tensor([x,0,0])
+        # self.previous_offset = offset
+
+        for obj_name in self.cfg.renderer.obj_names:
+            self.scene_mitsuba.parameters[obj_name+".vertex_positions"] = self.initial_vertices[obj_name]
+            self.scene_mitsuba.translate_obj( obj_name=obj_name, offset = offset)
+
+        # led
+        self.set_led_intensities( frame=frame )
+
+        # update
+        self.scene_mitsuba.parameters.update()
+
+    # @timing_decorator_print
+    def render_frame(self, camera_id, frame, spp, seed=0, differentiable=False):
+
+        # self.set_scene_frame(frame)
+        
+        if differentiable:
+            img = mi.render(self.scene_mitsuba.scene, self.scene_mitsuba.parameters, spp=spp, sensor=camera_id, seed=seed)
+        else:
+            img = mi.render(self.scene_mitsuba.scene, spp=spp, sensor=camera_id, seed=seed)
+        return img
+
+    def get_rendered_image(self, camera_id, frame, show=False, differentiable=False):
+        img = self.render_frame(camera_id, frame, spp=self.cfg.renderer.spp, differentiable=differentiable)
+        image = Image(img.numpy())
+        if show: image.show(img_name=f"camera {camera_id}, frame {frame}")
+        return image
+
+    def get_pixels(self, camera_id, frame, mode, device='cpu'):
+        if mode=="mask":
+            pixels = self.scene.get_mask_pixs_obj(camera_id, 0, ["mask"], frame=frame)
+        elif mode=="all":
+            cam = self.scene.get_cam(idx=camera_id, frame=frame)
+            pixels = cam.get_pixel_grid(device=self.device)
+        else:
+            raise ValueError(f"{mode} is not a valid mode")
+
+        pixels = pixels.to(device=device)
+        pixels = pixels.view(-1,2)
+
+        return pixels
+
+    def get_rays_and_pixels(self, camera_id, frame, spp, mode, perturb=True):
+
+        if (camera_id,frame) not in self.cache_rays.keys():
+            with torch.no_grad():
+                pixels_tot = self.get_pixels(camera_id, frame, mode=mode, device=self.device).unsqueeze(0)
+                n_pixels = pixels_tot.shape[1]
+
+                # compute pixel batches
+                pixel_batch = n_pixels
+                if self.cfg.renderer.pixel_batch is not None: pixel_batch = self.cfg.renderer.pixel_batch
+
+                rest = n_pixels%pixel_batch
+
+                n_batches = int(n_pixels/pixel_batch)+bool(rest)
+                self.cache_rays[(camera_id, frame)] = [None]*(n_batches)
+                self.cache_pixels[(camera_id, frame)] = [None]*(n_batches)
+
+                # for each batch
+                # import ipdb;ipdb.set_trace()
+                cam = self.scene.get_cam(idx=camera_id, frame=frame).to(pixels_tot.device)
+                for i in tqdm(range(n_batches),desc=f"preparing rays and pixels for camera {camera_id} and frame {frame}"):
+
+                    # import ipdb; ipdb.set_trace()
+                    N = pixel_batch
+                    if i == n_batches-1 and rest: N = rest
+
+                    # update_scene
+                    self.set_scene_frame(frame)
+
+                    # augment spp
+                    idx = pixel_batch*i
+                    pixels_new = pixels_tot[:,idx:idx+N,:].clone()
+                    pixels_new = pixels_new.repeat(spp, 1, 1)
+
+                    # perturb pixels
+                    if perturb:
+                        uniform_noise = (torch.rand(pixels_new.size()) - 0.5).to(pixels_new.device)
+                        pixels_new = uniform_noise + pixels_new
+
+                    # pixels to rays
+                    origin, cam_dir = cam.pix2ray(pixels_new)
+
+                    # preprocess rays (blender to mitsuba)
+                    origin_new = origin.clone()
+                    cam_dir_new = cam_dir.clone()
+                    origin_new[..., [1,2]] = origin_new[..., [2,1]]
+                    origin_new[..., [2]] *= -1
+                    cam_dir_new[..., [1,2]] = cam_dir_new[..., [2,1]]
+                    cam_dir_new[..., [2]] *= -1
+
+                    # get dr rays
+                    origin_new = origin_new.reshape( -1, 3 )
+                    cam_dir_new = cam_dir_new.reshape( -1, 3 )
+                    origin_b = dr.cuda.Array3f(origin_new.cpu().numpy())
+                    cam_dir_b = dr.cuda.Array3f(cam_dir_new.cpu().numpy())
+                    rays = mi.RayDifferential3f(o=origin_b, d=cam_dir_b)
+
+                    # update cache
+                    self.cache_rays[(camera_id, frame)][i] = rays
+                    self.cache_pixels[(camera_id, frame)][i] = pixels_new[0,...].to(torch.int32)
+
+        return self.cache_rays[(camera_id, frame)], self.cache_pixels[(camera_id, frame)]
+
+    def render_pixels_base(self, ray, seed, spp , variant):
+
+        if variant == "standard":
+            spec, _, _ = self.scene_mitsuba.render_rays(ray, seed=seed, spp=spp, optim=True)
+        if variant == "with_light":
+            spec, _, _ = self.integrator_custom.render_rays_with_light(ray=ray, seed=seed, spp=spp)
+
+        spec = dr.clamp(spec, 0, 0.99999)
+        return spec
+
+    # @timing_decorator_print
+    def render_pixels(self, camera_id, frame, spp, mode="all", seed=42, optim=False, perturb=True):
+
+        ray, pixels = self.get_rays_and_pixels(camera_id, frame, spp=spp, mode=mode, perturb=perturb)
+
+        spec = self.render_pixels_base(ray, seed, spp, variant="standard" )
+
+        return spec, pixels
+
+    # @timing_decorator_print
+    def render_pixels_with_light(self, camera_id, frame, spp, mode="all", seed=42, optim=False, perturb=True):
+
+        ray, pixels = self.get_rays_and_pixels(camera_id, frame, spp=spp, mode=mode, perturb=perturb)
+
+        spec = self.render_pixels_base(ray, seed, spp, variant="with_light" )
+
+        return spec, pixels
+
+    # -------------------------- opt -------------------------------------
+
+    def get_data_opt(self, camera_id, frame, spp, seed=42, mode="all", perturb=True):
+
+        if (camera_id,frame) in self.cache_data_opt.keys():
+            # self.set_scene_frame(frame)
+            data, pixels = self.cache_data_opt[(camera_id, frame)]
+        else:
+            rays, pixels = self.get_rays_and_pixels(camera_id, frame, spp, mode, perturb=True)
+            data = self.integrator_custom.prepare_data(rays, seed=seed, spp=spp)
+            self.cache_data_opt[(camera_id, frame)] = data, pixels
+
+        # rays, pixels = self.get_rays_and_pixels(camera_id, frame, spp, mode, perturb=True)
+        # integrator = IntegratorCustom(self.scene_mitsuba)
+        # data = integrator.prepare_data(rays, seed=seed, spp=spp)
+        # self.cache_data_opt[(camera_id, frame)] = data, pixels
+
+        return data, pixels
+
+
+    # @timing_decorator_print
+    def render_pixels_with_light_opt(self, camera_id, frame, spp, mode="all", seed=42, optim=False, perturb=True):
+
+        data, pixels = self.get_data_opt(camera_id, frame, spp=spp, seed=seed, mode=mode, perturb=perturb)
+
+        result =  mi.Spectrum(0.);
+        throughput =  mi.Spectrum(1.);
+        light_idx = self.integrator_custom.get_light_idx()
+        l_idx = light_idx/len(self.integrator_custom.mi_scene.emitters())
+        for d in data:
+
+            # # ---------------------- Emitter sampling ----------------------
+            # if dr.any(d["active_em"]):
+            #     ds, em_weight = self.integrator_custom.mi_scene.sample_emitter_direction(d["si"], l_idx, True, d["active_em"])
+            #     # wo = d["si"].to_local(ds.d)
+
+            # ------ Evaluate BSDF * cos(theta) and sample direction -------
+            [bsdf_val, _, bsdf_sample, bsdf_weight] = d["bsdf"].eval_pdf_sample( d["bsdf_ctx"], d["si"], d["wo"], d["sample_1"], d["sample_2"])
+
+            # --------------- Emitter sampling contribution ----------------
+            result[d["active_em"]] = IntegratorCustom.spec_fma( throughput, bsdf_val * d["em_weight"] * d["mis_em"], result)
+
+            # ---------------------- BSDF sampling ----------------------
+            bsdf_weight = d["si"].to_world_mueller(bsdf_weight, -bsdf_sample.wo, d["si"].wi)
+
+            # ------ Update loop variables based on current interaction ------
+            throughput *= bsdf_weight;
+
+            # [bsdf_val, _, _, _] = d["bsdf"].eval_pdf_sample( d["bsdf_ctx"], d["si"], d["wo"], d["sample_1"], d["sample_2"])
+            # result[d["active_em"]] = IntegratorCustom.spec_fma( d["throughput"], bsdf_val * d["em_weight"] * d["mis_em"], result)
+
+            # result[d["active_em"]] = IntegratorCustom.spec_fma( d["throughput"], d["bsdf_val"] * d["em_weight"] * d["mis_em"], result)
+
+        result = dr.clamp(result, 0, 0.99999)
+
+        return result, pixels
+        
+
+    # ----------------------------------------------------------------------
+
+    def render_pixels_test(self, camera_id, frame):
+        with torch.no_grad():
+            image_ref = self.scene.get_cam(idx=camera_id, frame=frame).get_image()
+            original_shape = list(image_ref.img.shape)
+            original_shape[0],original_shape[1] = original_shape[1],original_shape[0]
+
+            spp = self.cfg.renderer.spp
+            spp_max = self.cfg.renderer.spp_max_inference
+            iterations = int(spp/spp_max)
+
+            res = torch.zeros( original_shape[0:-1]+[3] ).to(self.device)
+
+            pixels = self.get_pixels(camera_id, frame, mode="all", device=self.device)
+
+            for i in tqdm(range(iterations), desc="render iterations", leave=True):
+                spec, _, _ = self.render_pixels(camera_id, frame, spp=spp_max, seed=i, optim=False, perturb=True)
+
+                spec_t = spec.torch()
+                # spec_t = spec_t.reshape(list(pixels.shape)[]+[3])
+                res[pixels[:,0],pixels[:,1]] += spec_t
+
+            res = torch.permute(res, [1,0,2])
+            img = Image(res.cpu()/iterations)
+            img.show(wk=0, img_name="ciao")
+            # self.get_rendered_image(camera_id, frame)
+
+    # def load_scene(self):
+
+    #     # load scene
+    #     sys.path.append(self.cfg.paths.collector_dir)
+    #     from load import CollectorLoader
+    #     data_loader = CollectorLoader(os.path.join(self.cfg.paths.data_in_dir,"config.yaml"))
+
+    #     # load scene
+    #     self.scene = data_loader.get_scene()
+    #     self.scene_mitsuba = self.scene.scene_mitsuba
+        
+    #     # load mitsuba scene
+    #     self.scene_mitsuba.set_depths(self.cfg.renderer.max_depth,self.cfg.renderer.rr_depth)
+    #     self.scene_mitsuba.load_scene()
+    #     self.scene_mitsuba.save_lights()
+
+if __name__=="__main__":
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--config_path', default="")
+        opt = parser.parse_args()
+        cfg = load_yaml(opt.config_path)
+
+
+
+        # render
+        r = Renderer(cfg)
+        r.scene_mitsuba.replace_parameters(cfg.replace)
+
+        # test stuff
+        r.set_scene_frame(0)
+        p = r.scene.scene_mitsuba.get_params()
+        # p["emitter_1.intensity.value"] = 100
+        # p.update()
+        print(p)
+        
+        # import ipdb; ipdb.set_trace()
+
+        # # render diff
+        spp = 16
+        ray, pixels = r.get_rays_and_pixels(0, 0, spp=spp, mode="mask")
+        # spec = r.render_pixels_base(ray[0], 0, spp, "with_light")
+        spec = r.render_pixels_base(ray[0], 0, spp, "standard")
+        spec = spec.torch().reshape(spp,-1,3).mean(0)
+        image_out = Image(np.zeros((1200,1920,3), dtype=np.float32))
+        image_out.img[pixels[0][:,1],pixels[0][:,0]] = spec.cpu()
+        image_out.show(wk=0, img_name="opt")
+
+#         # render standard
+#         img = r.render_frame(0,0, spp=1024).numpy()
+#         image = Image(img)
+#         image.show()

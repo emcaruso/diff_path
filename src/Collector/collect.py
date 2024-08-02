@@ -82,7 +82,8 @@ class Collector():
                 # images_undist = [ self.cams[i].intr.undistort_image(images[i]) for i in range(len(images)) ]
                 images_undist = self.preprocess(images)
                 images_overlap = self.pe.overlap_pose_from_idx( images_undist, idx)
-                key = Image.show_multiple_images(images_overlap, wk=1)
+                Image.show_multiple_images(images_overlap, wk=1, name="cam_copy")
+                key = Image.show_multiple_images(images_overlap, wk=1, name="cam")
                 if key==ord('q'):
                     return True
                 if key==ord('l'):
