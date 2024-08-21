@@ -9,11 +9,11 @@ led_cfg = load_yaml(led_cfg_path)
 
 lc = LightController(ip_controller=led_cfg.ip_controller)
 
-for k,v in led_cfg.leds.items():
-    lc.led_on(channel=v.channel, amp=0.4)
+for k, v in led_cfg.leds.items():
+    lc.led_on(channel=v.channel, amp=0.1)
 
 c = Collector()
 c.show_references()
 
-for k,v in led_cfg.leds.items():
+for k, v in led_cfg.leds.items():
     lc.led_off(channel=v.channel)
