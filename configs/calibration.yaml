@@ -1,15 +1,15 @@
 paths:
   config_dir: "${oc.env:YAML_DIR}"
-  calib_dir: "${paths.config_dir}/../src/Calibration" 
+  calib_dir: "${paths.config_dir}/../src/Calibration"
 
   # input
   scene_dir: "${paths.config_dir}/../data/scenes/${env}/${dataset_name}"
-  charuco_board_path: "${paths.calib_dir}/data/charuco_boards/${charuco_board}" 
-  sensor_path: "${paths.calib_dir}/data/sensors/${sensor}.yml" 
-  aruco_struct: "${paths.config_dir}/aruco_struct.yaml" 
+  charuco_board_path: "${paths.calib_dir}/data/charuco_boards/${charuco_board}"
+  sensor_path: "${paths.calib_dir}/data/sensors/${sensor}.yml"
+  aruco_struct: "${paths.config_dir}/aruco_struct.yaml"
 
   # output
-  save_dir: "${paths.config_dir}/../data/${save_name}/calib_data" 
+  save_dir: "${paths.config_dir}/../data/${save_name}/calib_data"
   save_scene: "${paths.save_dir}/scene" # DON'T CHANGE!
   out_dir: "${paths.save_dir}/output" # DON'T CHANGE!
   in_dir: "${paths.save_dir}/input" # DON'T CHANGE!
@@ -29,16 +29,16 @@ dataset_name: "default"
 
 intrinsics_calibration:
   name: "Intrinsics calibration"
-  do: True
+  do: False
   generate_data:
     do: True
     per_cam: True
     automatic: True
     dist_thresh_auto: 10000 # if automaic
-    exposure_time: 10000 
+    exposure_time: 10000
   paths:
     out_dir: "${paths.out_dir}/intrinsics" # DON'T CHANGE!
-    in_dir: "${paths.in_dir}/intrinsics"  # DON'T CHANGE!
+    in_dir: "${paths.in_dir}/intrinsics" # DON'T CHANGE!
     cache_dir: "Data/intrinsics" # DON'T CHANGE!
     charuco_board_path: "${paths.charuco_board_path}"
     sensor_path: "${paths.sensor_path}"
@@ -51,11 +51,11 @@ global_calibration:
   name: "Global calibration"
   do: True
   generate_data:
-    do: True
+    do: False
     per_cam: False
     automatic: False
     dist_thresh_auto: 10000 # if automaic
-    exposure_time: 20000 
+    exposure_time: 20000
   paths:
     out_dir: "${paths.out_dir}/global" # DON'T CHANGE!
     in_dir: "${paths.in_dir}/global" # DON'T CHANGE!
@@ -67,7 +67,6 @@ global_calibration:
     fix_intr: True
     intr_start: "${paths.out_dir}/intrinsics/calibrated_cameras_data.yml" # DON'T CHANGE!
     # intr_start: "None"
-
 
 intr: True
 blend_dir: ""

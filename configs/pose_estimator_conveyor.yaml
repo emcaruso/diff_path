@@ -24,7 +24,7 @@ render_tables:
     location: [0, 0, 0]
     euler: [0, 0, 0]
   ranges:
-    x: [-0.2,0.2]
+    x: [-0.2, 0.2]
     y: null
     z: null
     e0: null
@@ -47,7 +47,8 @@ generate_bin:
   do: True
 
 pose_estimator:
-  score_thresh: 0.01
+  score_thresh: 0.001
+  # score_thresh: 0.01
   # score_thresh: 0.015
   clamp_thresh: 0.02
   scale_fact: 1
