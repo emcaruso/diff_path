@@ -44,7 +44,7 @@ collect_track:
 collect_sequence:
   sequence: # list of couples (light_id, value on x axis)
     # - [ 0, -0.25 ]
-    - [0, -0.25]
+    - [0, 1000]
 
     # - [ 1, -0.15 ]
     # - [ 0, -0.12 ]

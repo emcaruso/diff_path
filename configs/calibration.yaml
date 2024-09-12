@@ -17,8 +17,8 @@ paths:
 
 save_name: "cvl1"
 # charuco_board: "charuco_7x5_3boards.yml"
-# charuco_board: "charuco_11x9_cvl.yml"
-charuco_board: "charuco_9x11_cvl_thin.yml"
+charuco_board: "charuco_11x9_cvl.yml"
+# charuco_board: "charuco_9x11_cvl_thin.yml"
 sensor: "Basler_ace2_a2A1920"
 
 # env: "Blender"
@@ -35,7 +35,7 @@ intrinsics_calibration:
     per_cam: True
     automatic: True
     dist_thresh_auto: 10000 # if automaic
-    exposure_time: 10000
+    exposure_time: 5000
   paths:
     out_dir: "${paths.out_dir}/intrinsics" # DON'T CHANGE!
     in_dir: "${paths.in_dir}/intrinsics" # DON'T CHANGE!
@@ -49,13 +49,13 @@ intrinsics_calibration:
 
 global_calibration:
   name: "Global calibration"
-  do: True
+  do: False
   generate_data:
-    do: False
+    do: True
     per_cam: False
     automatic: False
     dist_thresh_auto: 10000 # if automaic
-    exposure_time: 20000
+    exposure_time: 10000
   paths:
     out_dir: "${paths.out_dir}/global" # DON'T CHANGE!
     in_dir: "${paths.in_dir}/global" # DON'T CHANGE!
@@ -68,8 +68,16 @@ global_calibration:
     intr_start: "${paths.out_dir}/intrinsics/calibrated_cameras_data.yml" # DON'T CHANGE!
     # intr_start: "None"
 
+compute_world: True
+
 intr: True
 blend_dir: ""
 blend_dataset: ""
 no_render: True
 interactive: True
+
+correction:
+  iterations: 1000
+  device: "cuda"
+  debug: False
+  lr: 0.0001

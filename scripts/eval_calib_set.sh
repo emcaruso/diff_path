@@ -3,4 +3,4 @@ SCRIPTPATH="$(
   pwd -P
 )"
 
-python3 $SCRIPTPATH/../src/eval_calib.py --init
+python3 $SCRIPTPATH/../src/eval_calib.py --init --force

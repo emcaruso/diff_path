@@ -1,4 +1,3 @@
-
 ip_controller: "192.168.1.100"
 protocol: "tcp"
 max_intensity: 3
@@ -7,37 +6,37 @@ leds:
   led_0:
     channel: 0
     intensity: 0
-    info: {"position":"center-bottom-right", "cable_id": "W112"}
+    info: { "position": "center-bottom-right", "cable_id": "W112" }
   led_1:
     channel: 1
     intensity: 0
-    info: {"position":"far-bottom-right", "cable_id": "W104"}
+    info: { "position": "far-bottom-right", "cable_id": "W104" }
   led_2:
     channel: 2
     intensity: 0
-    info: {"position":"top-right", "cable_id": "W105"}
+    info: { "position": "top-right", "cable_id": "W105" }
   led_3:
     channel: 3
     intensity: 0
-    info: {"position":"near-bottom-right", "cable_id": "W105"}
-  # led_3:
-  #   channel: 4
-  #   intensity: 0
-  #   info: {"position":"near-bottom-left", "cable_id": "W108"}
-  # led_4:
-  #   channel: 5
-  #   intensity: 0
-  #   info: {"position":"far-bottom-left", "cable_id": "W107"}
-  # led_5:
-  #   channel: 6
-  #   intensity: 0
-    # info: {"position":"top-left", "cable_id": "W106"}
+    info: { "position": "near-bottom-right", "cable_id": "W105" }
+  led_4:
+    channel: 4
+    intensity: 0
+    info: { "position": "near-bottom-left", "cable_id": "W108" }
+  led_5:
+    channel: 5
+    intensity: 0
+    info: { "position": "far-bottom-left", "cable_id": "W107" }
+  led_6:
+    channel: 6
+    intensity: 0
+    info: { "position": "top-left", "cable_id": "W106" }
 
 leds_cc:
   led_0:
     channel: 13
     intensity: 0.001
-    info: {"position":"left", "cable_id": "W102"}
+    info: { "position": "left", "cable_id": "W102" }
 
 test:
   intensity: 0.1

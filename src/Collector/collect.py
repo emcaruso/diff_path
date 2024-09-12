@@ -1,4 +1,5 @@
 import os, sys
+import argparse
 import numpy as np
 import torch
 import time
@@ -19,7 +20,7 @@ led_cfg_path = os.path.join(script_dir, "..", "..", "configs", "leds.yaml")
 
 class Collector:
 
-    def __init__(self):
+    def __init__(self, cfg_path, led_cfg_path):
         self.cfg_path = cfg_path
         self.cfg = load_yaml(cfg_path)
         self.fe = frame_extractor(sRGB=True)
@@ -54,13 +55,13 @@ class Collector:
                 os.path.join(self.cfg.paths.color_correction_data_dir, "res.yaml")
             )
             for i, (k, v) in enumerate(d.items()):
-                self.cc_gain[i, :] = torch.tensor(v, dtype=torch.float32)
+                self.cc_gain[i, :] = torch.tensor(v, dtype=torch.float64)
 
         self.exp_gain = torch.ones(self.fe.n_devices)
         if self.cfg.normalization.exposure_time_ref is not None:
             ets = self.fe.get_exposure()
             self.exp_gain = self.cfg.normalization.exposure_time_ref / torch.tensor(
-                ets, dtype=torch.float32
+                ets, dtype=torch.float64
             )
 
     def preprocess(self, images):
@@ -109,6 +110,10 @@ class Collector:
                     idx -= 10
                 if key == ord("h"):
                     idx -= 1
+                if key == ord("o"):
+                    idx += 100
+                if key == ord("u"):
+                    idx -= 100
                 idx = min(idx, self.pe.n_poses - 1)
                 idx = max(idx, 0)
 
@@ -176,9 +181,10 @@ class Collector:
             for i in range(len(image_list)):
                 image_list[i][j].type(torch.uint8)
                 image_list[i][j].save(os.path.join(o_dir, str(i).zfill(3) + ".png"))
-                image_show_list[i][j].save(
-                    os.path.join(o_dir_show, str(i).zfill(3) + ".png")
-                )
+                if image_show_list is not None:
+                    image_show_list[i][j].save(
+                        os.path.join(o_dir_show, str(i).zfill(3) + ".png")
+                    )
 
         return True
 
@@ -212,8 +218,13 @@ class Collector:
     #                 return False
 
     #         return True
+    #
 
-    def save_data(self, pose_list, led_list):
+    def _save_cfg(self):
+        cfg_path_out = os.path.join(self.cfg.paths.save_dir, "config.yaml")
+        OmegaConf.save(self.cfg, cfg_path_out)
+
+    def save_data(self, pose_list, led_list, save_blender=True):
         # SAVE
         if pose_list == []:
             return False
@@ -226,11 +237,11 @@ class Collector:
         np.save(os.path.join(out_dir, "poses.npy"), pose_list)
 
         # # save blender
-        self.save_blender()
+        if save_blender:
+            self.save_blender()
 
         # save cfg
-        cfg_path_out = os.path.join(self.cfg.paths.save_dir, "config.yaml")
-        OmegaConf.save(self.cfg, cfg_path_out)
+        self._save_cfg()
 
         return True
 
@@ -399,7 +410,35 @@ class Collector:
 
         self.save_data(pose_list, image_list, led_list, image_show_list)
 
-    def collect_while_tracking(self, manual=True, debug=False):
+    def collect_images_only(self):
+        # collect
+        self.fe.start_cams(
+            signal_period=self.cfg.collect_track.signal_period,
+            exposure_time=self.cfg.collect_track.exposure_time,
+        )
+        self.prepare_normalization_data()
+        image_list = []
+        while True:
+            images = self.fe.grab_multiple_cams()
+            images_undist = self.preprocess(images)
+
+            key = Image.show_multiple_images(images_undist, wk=1)
+            if key == ord("q"):
+                cv2.destroyAllWindows()
+                break
+            if key == 32:
+                image_list.append(images_undist)
+                print(f"collected {len(image_list)} images")
+
+        for led in self.led_cfg.leds.values():
+            self.lc.led_off(led.channel)
+
+        self.save_images(image_list, None)
+        self._save_cfg()
+
+        return True
+
+    def collect_while_tracking(self, manual=True, debug=False, save_blender=True):
         # collect
         self.fe.start_cams(
             signal_period=self.cfg.collect_track.signal_period,
@@ -468,7 +507,7 @@ class Collector:
         # save data loader
 
         self.save_images(image_list, image_show_list)
-        self.save_data(pose_list, led_list)
+        self.save_data(pose_list, led_list, save_blender)
 
         return True
 
@@ -479,7 +518,12 @@ class Collector:
 
 
 if __name__ == "__main__":
-    collector = Collector()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config_path", default=cfg_path)
+    parser.add_argument("--led_config_path", default=led_cfg_path)
+    opt = parser.parse_args()
+
+    collector = Collector(opt.config_path, opt.led_config_path)
     # collector.show_references()
     # collector.collect_manual()
     collector.test_leds()

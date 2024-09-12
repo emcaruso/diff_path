@@ -1,0 +1,3 @@
+paths:
+  config_dir: "${oc.env:YAML_DIR}"
+  collector_dir: ${paths.config_dir}/../src/Collector

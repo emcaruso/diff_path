@@ -31,7 +31,7 @@ render_tables:
     e1: null
     e2: null
   intervals:
-    x: 3
+    x: 2
     y: null
     z: null
     e0: null
@@ -51,4 +51,5 @@ pose_estimator:
   # score_thresh: 0.01
   # score_thresh: 0.015
   clamp_thresh: 0.02
+  # scale_fact: 1
   scale_fact: 1

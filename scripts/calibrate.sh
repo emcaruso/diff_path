@@ -20,8 +20,9 @@ SCRIPTPATH="$(
 #. $SCRIPTPATH/../src/Calibration/env/venv/bin/activate
 #pip install -r $SCRIPTPATH/../src/Calibration/env/requirements.txt
 
-# python3 $SCRIPTPATH/../src/Calibration/src/main.py --config_path $SCRIPTPATH/../configs/calibration.yaml
-# python3 $SCRIPTPATH/../src/Calibration/src/conveyor_preprocess.py --config_path $SCRIPTPATH/../configs/calibration.yaml
-
-# execute sh script
-sh $SCRIPTPATH/eval_calib_set.sh
+sh $SCRIPTPATH/leds_on.sh
+python3 $SCRIPTPATH/../src/Calibration/src/main.py --config_path $SCRIPTPATH/../configs/calibration.yaml
+sh $SCRIPTPATH/leds_off.sh
+python3 $SCRIPTPATH/../src/Calibration/src/conveyor_preprocess.py --config_path $SCRIPTPATH/../configs/calibration.yaml
+python3 $SCRIPTPATH/../src/Calibration/src/main.py --config_path $SCRIPTPATH/../configs/calibration.yaml --conv_boards
+# python3 $SCRIPTPATH/../src/eval_calib.py --init
