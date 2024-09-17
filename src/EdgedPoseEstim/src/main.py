@@ -106,7 +106,7 @@ class Program:
                 mask = (
                     F.conv2d(
                         mask.unsqueeze(0).unsqueeze(0).float(),
-                        torch.ones((1, 1, 5, 5), device=mask.device),
+                        torch.ones((1, 1, 3, 3), device=mask.device),
                         padding=1,
                     )
                 ).squeeze(0).squeeze(0) > 0

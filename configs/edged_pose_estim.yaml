@@ -25,7 +25,7 @@ opt:
 
   # l2
   lr_scl_obj: 0.0002
-  lr_eul_obj: 0.000
+  lr_eul_obj: 0.0001
   lr_pos_obj: 0.00002
   lr_eul_cam: 0.0002
   lr_pos_cam: 0.00002
@@ -70,7 +70,7 @@ opt:
   reg_lambda: 0.0001
   # reg_lambda: 0.00001
 
-collect_images: False
+collect_images: True
 # canny_sigma: 0.75
 canny_sigma: 0.04
 # canny_sigma: 1.5
@@ -89,7 +89,7 @@ wk_edges: 0
 obj_only_x: True
 obj_shared_rot: True
 # obj_shared_yz: False
-obj_fixed_e1e2: True
+obj_fixed_e1e2: False
 opt_cams: True
 obj_scale: True
 opt_boards: False

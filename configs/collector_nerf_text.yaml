@@ -8,15 +8,14 @@ paths:
   led_cfg_dir: "${paths.config_dir}/leds.yaml"
   blender_dir: "${paths.calib_data_dir}/scene" # scene folder where there is the blender scene relative to calibration data
 
-  save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/collector_edge_pose_data_conv"
+  save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/collector_nerf_text"
   mesh_dir: "${paths.save_dir}/mesh"
   captured_dir: "${paths.save_dir}/captured"
 
 save_name: "cvl1"
 
 objects:
-  - "cj_machined"
-  - "cj_unmachined"
+  - "cj_lowpoly"
 
 normalization:
   color_correction: False
@@ -32,9 +31,18 @@ collect_manual:
 collect_track:
   signal_period: 100000
   exposure_time: 20000
-  range_half: 40
+  range_half: 80
+  velocity: (10*1024/0.4)*0.002
+  # velocity: "0"
 
 collect_sequence:
   sequence: # list of couples (light_id, value on x axis)
     # - [ 0, -0.25 ]
     - [0, 1000]
+
+collect_video:
+  init: "pose"
+  # init: 40 # start point in frames
+  end: "pose"
+  # end: 40 # start point in frames
+  out: "png"

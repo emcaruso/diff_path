@@ -12,4 +12,5 @@ parser.add_argument("--led_config_path", default=led_cfg_path)
 opt = parser.parse_args()
 
 collector = Collector(opt.config_path, opt.led_config_path)
-collector.collect_while_tracking(manual=False, debug=True)
+# collector.collect_while_tracking(manual=False, debug=True)
+collector.collect_manual(debug=True)

@@ -24,7 +24,7 @@ render_tables:
     location: [0, 0, 0]
     euler: [0, 0, 0]
   ranges:
-    x: [-0.2, 0.2]
+    x: [-0.18, 0.18]
     y: null
     z: null
     e0: null

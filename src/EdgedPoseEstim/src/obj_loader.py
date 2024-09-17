@@ -18,10 +18,13 @@ class ObjLoader:
         obj_ref = Object(self.cfg.paths.mesh_path)
         # poses = [Pose(T=torch.eye(4)) for _ in range(n)]
         poses = self.get_poses()
+
         objects = []
         for pose in poses:
             obj = obj_ref.clone()
-            obj.pose = pose
+
+            obj.pose = pose[0]
+            # obj.pose = Pose(T=torch.tensor(pose))
             objects.append(obj)
         return objects
 
@@ -33,7 +36,7 @@ class ObjLoader:
             os.path.join(self.cfg.paths.collector_in_dir, "config.yaml")
         )
         try:
-            poses = data_loader.get_poses()
-            return list(poses.values())
+            poses = data_loader.get_poses().tolist()
+            return poses
         except:
             return [Pose(T=torch.eye(4))]

@@ -45,7 +45,9 @@ class ImageCollector:
         if self.cfg.images_only:
             collector.collect_images_only()
         else:
-            collector.collect_while_tracking(manual=True, save_blender=False)
+            collector.collect_while_tracking(
+                manual=True, save_blender=False, synch=True
+            )
 
     def _load_images(self) -> List[List[Image]]:
         # load collected images

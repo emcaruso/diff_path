@@ -1,3 +1,12 @@
 paths:
   config_dir: "${oc.env:YAML_DIR}"
-  collector_dir: ${paths.config_dir}/../src/Collector
+  collector_dir: "${paths.config_dir}/../src/Collector"
+  collector_cfg: "${paths.config_dir}/collector_nerf_text.yaml"
+  led_cfg: "${paths.config_dir}/leds.yaml"
+  mesh_path: "${oc.env:YAML_DIR}/../data/scenes/Basler/meshes/cj_lowpoly.obj"
+
+collect:
+  collect_images: False
+  collect_training_data: True
+  texture_res: 4096
+  device: cpu

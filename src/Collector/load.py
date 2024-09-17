@@ -38,12 +38,7 @@ class CollectorLoader:
         if not os.path.exists(pose_path):
             raise ValueError(f"{pose_path} not valid path!")
 
-        pose_data = np.load(pose_path)
-
-        poses = {}
-        for i, p in enumerate(pose_data):
-            pose = Pose(T=torch.from_numpy(p.astype(np.float32)))
-            poses["frame_" + str(i).zfill(3)] = pose
+        poses = np.load(pose_path, allow_pickle=True)
 
         return poses
 
@@ -94,14 +89,14 @@ class CollectorLoader:
         scene = dl.get_scene()
         return scene
 
-    def get_images(self, overlap=False):
+    def get_images(self, overlap=False, device="cpu"):
         images_dict = {}
 
         dir = self.sequence_dir if not overlap else self.sequence_show_dir
         for i, image_dir in enumerate(sorted(dir.iterdir())):
             images_dict[image_dir.stem] = {}
             for j, image_file in enumerate(sorted(image_dir.iterdir())):
-                image = Image(path=str(image_file))
+                image = Image(path=str(image_file), device=device)
                 images_dict[image_dir.stem][image_file.stem] = image
         return images_dict
 
