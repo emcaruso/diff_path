@@ -1,12 +1,70 @@
 paths:
   config_dir: "${oc.env:YAML_DIR}"
   collector_dir: "${paths.config_dir}/../src/Collector"
-  collector_cfg: "${paths.config_dir}/collector_nerf_text.yaml"
   led_cfg: "${paths.config_dir}/leds.yaml"
   mesh_path: "${oc.env:YAML_DIR}/../data/scenes/Basler/meshes/cj_lowpoly.obj"
+  save_data: "${oc.env:YAML_DIR}/../data/${save_name}/nerf_data"
+
+save_name: "cvl1"
 
 collect:
-  collect_images: False
-  collect_training_data: True
   texture_res: 4096
-  device: cpu
+  device: "cpu"
+  train:
+    collect_images: False
+    collect_training_data: False
+    type: "collect_video"
+    collector_cfg: "${paths.config_dir}/collector_nerf_text_train.yaml"
+    subfolder: "train"
+
+  eval:
+    collect_images: False
+    collect_training_data: False
+    type: "collect_manual_while_track"
+    collector_cfg: "${paths.config_dir}/collector_nerf_text_eval.yaml"
+    subfolder: "eval"
+
+train:
+  device: "cuda"
+  epochs: 1000
+  lr: 0.001
+  data_loader_params:
+    batch_size: 131072
+    shuffle: True
+    num_workers: 8
+    persistent_workers: True
+    pin_memory: True
+  save_every: 1
+  load: True
+
+eval:
+  device: "cuda"
+  chunk_size: 1000000
+
+model:
+  hidden_size: 256
+  n_layers: 5
+
+  # encoder_x:
+  #   type: "None"
+  #   kwargs:
+  #     input_dim: 1
+
+  encoder_x:
+    type: "frequency"
+    kwargs:
+      dim: 1
+      n_levels: 10
+
+  # encoder_x:
+  #   type: "gridencoder"
+  #   kwargs:
+  #     input_dim: 2
+
+  encoder_uv:
+    type: "frequency"
+    kwargs:
+      dim: 2
+      n_levels: 10
+
+  #     num_levels: 4

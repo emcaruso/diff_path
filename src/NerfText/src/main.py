@@ -1,4 +1,5 @@
 from data_collector import DataCollector
+from trainer import Trainer
 import argparse
 from utils_ema.config_utils import load_yaml
 import os
@@ -12,14 +13,15 @@ class Program:
     def __init__(self, opt):
         self.cfg_path = opt.config_path
         self.cfg = load_yaml(self.cfg_path)
-        self.dc = DataCollector(self.cfg)
         self.mode = opt.mode
 
     def collect(self):
-        self.dc.collect_data()
+        dc = DataCollector(self.cfg)
+        dc.collect_data()
 
     def train(self):
-        pass
+        trainer = Trainer(self.cfg)
+        trainer.train()
 
     def evaluate(self):
         pass
