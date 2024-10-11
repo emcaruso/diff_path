@@ -3,10 +3,10 @@ protocol: "tcp"
 max_intensity: 3
 
 leds:
-  led_0:
-    channel: 0
-    intensity: 0
-    info: { "position": "center-bottom-right", "cable_id": "W112" }
+  # led_0:
+  #   channel: 0
+  #   intensity: 0
+  #   info: { "position": "center-bottom-right", "cable_id": "W112" }
   led_1:
     channel: 1
     intensity: 0

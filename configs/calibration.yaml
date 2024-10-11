@@ -49,9 +49,9 @@ intrinsics_calibration:
 
 global_calibration:
   name: "Global calibration"
-  do: False
+  do: True
   generate_data:
-    do: True
+    do: False
     per_cam: False
     automatic: False
     dist_thresh_auto: 10000 # if automaic

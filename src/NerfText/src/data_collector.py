@@ -1,4 +1,5 @@
 from collections import defaultdict
+from tqdm import tqdm
 import os
 import numpy as np
 import torch
@@ -29,7 +30,7 @@ class DataCollector:
         )
         cl = Collector(dict_coll.collector_cfg, self.cfg.paths.led_cfg)
         if dict_coll.type == "collect_video":
-            cl.collect_video(debug=True)
+            cl.collect_video(debug=True, range_ids=dict_coll.range_pose_ids)
         elif dict_coll.type == "collect_manual_while_track":
             # cl.collect_while_tracking(manual=True, debug=True)
             cl.collect_manual()
@@ -55,16 +56,20 @@ class DataCollector:
         objects = []
         for cam_id in range(len(cams)):
             objects.append([])
-            for pose in poses:
+            for pose_id, pose in enumerate(poses):
                 obj = Object(mesh=mesh_ref, pose=pose[cam_id], device=self.device)
                 objects[-1].append(obj)
 
-        # get images
-        images = dl.get_images(device=self.device)
-        images = list(images.values())
-        images = [list(img_list.values()) for img_list in images]
+        # # get images
+        # images = dl.get_images(device=self.device)
+        # images = list(images.values())
+        # images = [list(img_list.values()) for img_list in images]
+        # return cams, objects, images
+        #
+        # get images generator
+        images_gen = dl.get_images_gen(device=self.device)
 
-        return cams, objects, images
+        return cams, objects, images_gen
 
     def _collect_uvs_and_img_vals(self, cam, obj, img):
         gbuffers, pixs, _ = Renderer().get_buffers_pixels_dirs(
@@ -87,59 +92,78 @@ class DataCollector:
         return uv_vals, img_vals
 
     def _save_data(self, data, subfolder):
-        out_dir = os.path.join(self.cfg.paths.save_data, subfolder)
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
+        print("Saving data")
+        for i, d in enumerate(data.values()):
+            out_dir = os.path.join(self.cfg.paths.save_data, subfolder, str(i).zfill(3))
+            if not os.path.exists(out_dir):
+                os.makedirs(out_dir)
 
-        data["input"] = torch.cat(data["input"], dim=0)
-        data["output"] = torch.cat(data["output"], dim=0)
-        data = torch.stack([data["input"], data["output"]], dim=1)
-        save_memory_mapped_arr(
-            data,
-            out_dir,
-            "nerf_data",
-            dtype=np.float32,
+            d["input"] = torch.cat(d["input"], dim=0)
+            d["output"] = torch.cat(d["output"], dim=0)
+            d = torch.stack([d["input"], d["output"]], dim=1)
+            save_memory_mapped_arr(
+                d,
+                out_dir,
+                "nerf_data",
+                dtype=np.float32,
+            )
+
+    def load_data(self, subfolder, cam_id):
+
+        path = Path(
+            os.path.join(
+                self.cfg.paths.save_data,
+                subfolder,
+                str(cam_id).zfill(3),
+                "nerf_data.bin",
+            )
         )
-
-    def load_data(self, subfolder):
-
-        path = Path(os.path.join(self.cfg.paths.save_data, subfolder, "nerf_data.bin"))
         if os.path.exists(path):
             data = load_memory_mapped_arr(
                 str(path.parent), str(path.stem), dtype=np.float32
             )
             return data
         else:
-            raise FileNotFoundError("Data not found")
+            raise FileNotFoundError(f"Path {path} not found")
 
     def _collect_training_data(self, dict_coll):
 
         # nerf data
-        data_nerf = {"input": [], "output": []}
+        data_nerf = {}
 
         cams, objs, imgs = self._get_cams_objs_imgs(dict_coll=dict_coll)
 
         # for each cam
         for cam_id, obj_list in enumerate(objs):
 
+            data_nerf[cam_id] = {"input": [], "output": []}
+
             cam = list(cams.values())[cam_id]
-            for img_id, obj in enumerate(obj_list):
+            for img_id, obj in enumerate(
+                tqdm(obj_list, leave=False, desc=f"imgs, cam: {cam_id}")
+            ):
 
-                img = imgs[cam_id][img_id]
+                rng = self.cfg.collect.train.img_id_range
+                if img_id in range(rng[0], rng[1]):
 
-                # get uvs (input) and vals (output)
-                uvs, vals = self._collect_uvs_and_img_vals(cam, obj, img)
+                    # img = imgs[cam_id][img_id]
+                    img = next(imgs)
 
-                # # debug texture
-                # texture = Texture.init_from_uvs(uvs, vals, self.cfg.collect.texture_res)
-                # texture.show()
+                    # get uvs (input) and vals (output)
+                    uvs, vals = self._collect_uvs_and_img_vals(cam, obj, img)
 
-                # append nerf data
-                x = obj.pose.location()[0]
-                data_nerf["input"].append(
-                    torch.cat([uvs, x.repeat(uvs.shape[0], 1)], dim=-1)
-                )
-                data_nerf["output"].append(vals)
+                    # # debug texture
+                    # texture = Texture.init_from_uvs(
+                    #     uvs, vals, self.cfg.collect.texture_res
+                    # )
+                    # texture.show()
+
+                    # append nerf data
+                    x = obj.pose.location()[0]
+                    data_nerf[cam_id]["input"].append(
+                        torch.cat([x.repeat(uvs.shape[0], 1), uvs], dim=-1)
+                    )
+                    data_nerf[cam_id]["output"].append(vals)
 
         # save
         self._save_data(data_nerf, subfolder=dict_coll.subfolder)

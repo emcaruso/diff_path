@@ -31,9 +31,15 @@ class CollectorLoader:
         self.mesh_dir = os.path.join(self.cfg.paths.save_dir, "mesh")
         self.sequence_dir = Path(os.path.join(self.frames_out, "sequences"))
         self.sequence_show_dir = Path(os.path.join(self.frames_out, "sequences_show"))
+        self.subfolder = ""
+
+    def set_subfolder(self, subfolder):
+        self.subfolder = subfolder
 
     def get_poses(self):
-        pose_path = os.path.join(self.cfg.paths.captured_dir, "poses.npy")
+        pose_path = os.path.join(
+            self.cfg.paths.captured_dir, self.subfolder, "poses.npy"
+        )
 
         if not os.path.exists(pose_path):
             raise ValueError(f"{pose_path} not valid path!")
@@ -43,7 +49,9 @@ class CollectorLoader:
         return poses
 
     def get_lights_data(self):
-        leds_path = os.path.join(self.cfg.paths.captured_dir, "leds.npy")
+        leds_path = os.path.join(
+            self.cfg.paths.captured_dir, self.subfolder, "leds.npy"
+        )
 
         if not os.path.exists(leds_path):
             raise ValueError(f"{leds_path} not valid path!")
@@ -89,9 +97,26 @@ class CollectorLoader:
         scene = dl.get_scene()
         return scene
 
+    def get_images_gen(self, overlap=False, device="cpu"):
+        images_dict = {}
+        dir = self.sequence_dir if not overlap else self.sequence_show_dir
+        for i, image_dir in enumerate(sorted(dir.iterdir())):
+            images_dict[image_dir.stem] = {}
+            for j, image_file in enumerate(sorted(image_dir.iterdir())):
+                image = Image(path=str(image_file), device=device)
+                yield image
+
+    def get_image(self, cam_idx, frame_idx, overlap=False, device="cpu"):
+        dir = self.sequence_dir if not overlap else self.sequence_show_dir
+        cam_dirs = sorted(list(dir.iterdir()))
+        # get list of files in dir
+        images_files = sorted(list(cam_dirs[cam_idx].iterdir()))
+        # image_dir = sorted(list(dir.iterdir()))[cam_idx]
+        image = Image(path=str(images_files[frame_idx]), device=device)
+        return image
+
     def get_images(self, overlap=False, device="cpu"):
         images_dict = {}
-
         dir = self.sequence_dir if not overlap else self.sequence_show_dir
         for i, image_dir in enumerate(sorted(dir.iterdir())):
             images_dict[image_dir.stem] = {}
@@ -134,7 +159,9 @@ class CollectorLoader:
         cams = scene.get_cams()
         if cams is not None:
             new_cams = []
-            imgs_path = os.path.join(self.cfg.paths.captured_dir, "sequences")
+            imgs_path = os.path.join(
+                self.cfg.paths.captured_dir, self.subfolder, "sequences"
+            )
             for i in range(n_poses):
                 new_cams.append([])
                 for j, cam in enumerate(cams):

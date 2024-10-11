@@ -1,0 +1,48 @@
+paths:
+  config_dir: "${oc.env:YAML_DIR}"
+
+  # input
+  calib_data_dir: "${paths.config_dir}/../data/${save_name}/calib_data"
+  color_correction_data_dir: "${paths.config_dir}/../data/${save_name}/color_correction_data"
+  pose_estimator_data_dir: "${paths.config_dir}/../data/${save_name}/pose_estimator_data"
+  led_cfg_dir: "${paths.config_dir}/leds.yaml"
+  blender_dir: "${paths.calib_data_dir}/scene" # scene folder where there is the blender scene relative to calibration data
+
+  save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/collector_porosity_detector/eval"
+  mesh_dir: "${paths.save_dir}/mesh"
+  captured_dir: "${paths.save_dir}/captured"
+
+save_name: "cvl1"
+
+objects:
+  - "cj_lowpoly"
+
+normalization:
+  color_correction: False
+  exposure_time_ref: 20000
+
+led_amp: 1.0
+
+collect_manual:
+  # signal_period: 100000
+  signal_period: 500000
+  exposure_time: 20000
+
+collect_track:
+  signal_period: 100000
+  exposure_time: 20000
+  range_half: 200
+  velocity: (4*1024/0.8)*0.002
+  # velocity: "0"
+
+collect_sequence:
+  sequence: # list of couples (light_id, value on x axis)
+    # - [ 0, -0.25 ]
+    - [0, 1000]
+
+collect_video:
+  init: "pose"
+  # init: 40 # start point in frames
+  end: "pose"
+  # end: 40 # start point in frames
+  out: "png"

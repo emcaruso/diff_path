@@ -31,7 +31,7 @@ render_tables:
     e1: null
     e2: null
   intervals:
-    x: 1024
+    x: 2046
     y: null
     z: null
     e0: null
@@ -47,7 +47,7 @@ generate_bin:
   do: True
 
 pose_estimator:
-  score_thresh: 0.01
+  score_thresh: 0.013
   # score_thresh: 0.01
   # score_thresh: 0.015
   clamp_thresh: 0.02

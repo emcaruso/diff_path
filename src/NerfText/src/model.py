@@ -37,15 +37,14 @@ class Model(torch.nn.Module):
 
     def _get_encoder_part(self, enc_type, **kwargs):
         if enc_type == "None":
-            encoder = encoding.NoEncoding()
+            encoder = encoding.NoEncoding(**kwargs)
         elif enc_type == "frequency":
             encoder = encoding.Frequency(**kwargs)
-        elif enc_type == "hash_grid":
+        elif enc_type == "multi_res_hash_grid":
             encoder = encoding.MultiResHashGrid(**kwargs)
+        else:
+            raise ValueError(f"Unknown encoding type: {enc_type}")
         return encoder
-
-    def _get_main_encoder(self, encoder_x, encoder_uv):
-        encoder = torch.nn.Module()
 
     def _get_positional_encoder(self):
 
@@ -106,10 +105,11 @@ class Model(torch.nn.Module):
         y = self.model(x)
         return y
 
-    def get_texture(self, x_val=0):
+    def get_texture(self, x_val):
         with torch.no_grad():
-            res = self.cfg.collect.texture_res
 
+            # create texture
+            res = self.cfg.collect.texture_res
             texture = torch.zeros((res, res, 3))
 
             # get mask texture from mesh
@@ -117,11 +117,16 @@ class Model(torch.nn.Module):
             texture_mask = obj.mesh.get_texture_mask(res)
 
             pixels = torch.nonzero(texture_mask)
-            uvs = pixels / res
-            uvs = uvs.to(self.cfg.eval.device)
-            print(uvs.shape)
+            # pixels to uv coordinates
 
-            # extend uvs with x=0
+            uvs = pixels / (res - 1)
+            # swap last two columns
+            uvs = uvs[:, [1, 0]]
+            # uvs[:, 1] = 1 - uvs[:, 1]
+
+            uvs = uvs.to(self.cfg.eval.device)
+
+            # extend uvs with x
             x = torch.ones(uvs.shape[0], 1).to(self.cfg.eval.device) * x_val
             uvs = torch.cat((x, uvs), dim=1)
 
@@ -136,6 +141,5 @@ class Model(torch.nn.Module):
                     pixels[i * n : i * n + len(uv), 1],
                 ] = vals.cpu()
             img = Image(texture)
-            img.show()
 
         return img

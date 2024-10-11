@@ -277,7 +277,8 @@ class Collector:
 
         # save data
         out_dir = self.cfg.paths.captured_dir
-        np.save(os.path.join(out_dir, "leds.npy"), led_list)
+        if led_list is not None:
+            np.save(os.path.join(out_dir, "leds.npy"), led_list)
         for i, pose in enumerate(pose_list):
             pose_list[i] = pose_list[i]
         np.save(os.path.join(out_dir, "poses.npy"), pose_list, allow_pickle=True)
@@ -562,7 +563,12 @@ class Collector:
 
         return True
 
-    def collect_video(self, debug=True, instant_save=True):
+    def collect_video(self, debug=True, instant_save=True, range_ids=None):
+
+        # clear data
+        shutil.rmtree(self.cfg.paths.captured_dir, ignore_errors=True)
+        os.makedirs(self.cfg.paths.captured_dir)
+
         self.fe.start_cams(
             # signal_period=self.cfg.collect_track.signal_period,
             exposure_time=self.cfg.collect_track.exposure_time,
@@ -570,8 +576,6 @@ class Collector:
         v = eval(self.cfg.collect_track.velocity)
         self.prepare_normalization_data()
 
-        image_list = []
-        image_show_list = []
         pose_list = []
 
         time_1, time_2 = 0, 0
@@ -584,7 +588,10 @@ class Collector:
                 images = self.fe.grab_multiple_cams()
 
                 images_undist = self.preprocess(images)
-                rang = np.array([[0, 40]] * len(self.cams))
+                rang = np.array([[0, 80]] * len(self.cams))
+                if range_ids is not None:
+                    rang += range_ids[0]
+
                 imgs_show, pose, in_thresh, best_pose_id = (
                     self.pe.overlap_estimated_pose(
                         images_undist, rang=rang, debug=debug, synch=False
@@ -615,6 +622,8 @@ class Collector:
 
                 images_undist = self.preprocess(images)
                 rang = self._get_range(current_id)
+                if range_ids is not None:
+                    rang[1].clip(max=range_ids[1])
 
                 imgs_show, pose, in_thresh, best_pose_id = (
                     self.pe.overlap_estimated_pose(

@@ -40,6 +40,7 @@ class NoEncoding(nn.Module):
         self,
         dim: int,
     ):
+        super().__init__()
         self.input_dim = dim
         self.output_dim = dim
 
@@ -143,7 +144,7 @@ class MultiResHashGrid(nn.Module):
         n_features_per_level: int = 2,
         log2_hashmap_size: int = 15,
         base_resolution: int = 16,
-        finest_resolution: int = 512,
+        finest_resolution: int = "512",
     ):
         """NVidia's hash grid encoding
         https://nvlabs.github.io/instant-ngp/
@@ -169,11 +170,12 @@ class MultiResHashGrid(nn.Module):
         self.n_features_per_level = n_features_per_level
         self.log2_hashmap_size = log2_hashmap_size
         self.base_resolution = base_resolution
-        self.finest_resolution = finest_resolution
+        self.finest_resolution = eval(finest_resolution)
 
         # from paper eq (3)
         b = math.exp(
-            (math.log(finest_resolution) - math.log(base_resolution)) / (n_levels - 1)
+            (math.log(self.finest_resolution) - math.log(base_resolution))
+            / (n_levels - 1)
         )
 
         levels = []

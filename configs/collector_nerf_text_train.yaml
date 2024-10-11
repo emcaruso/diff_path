@@ -31,8 +31,8 @@ collect_manual:
 collect_track:
   signal_period: 100000
   exposure_time: 20000
-  range_half: 80
-  velocity: (10*1024/0.4)*0.002
+  range_half: 200
+  velocity: (4*1024/0.8)*0.002
   # velocity: "0"
 
 collect_sequence:

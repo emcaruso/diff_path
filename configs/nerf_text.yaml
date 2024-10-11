@@ -8,14 +8,23 @@ paths:
 save_name: "cvl1"
 
 collect:
+  # texture_res: 8192
   texture_res: 4096
+  # texture_res: 3000
+  #texture_res: 2800
+  # texture_res: 2240
+  # texture_res: 2046
   device: "cpu"
   train:
     collect_images: False
-    collect_training_data: False
+    # range_pose_ids: [0, 300]
+    range_pose_ids: null
+    collect_training_data: True
     type: "collect_video"
     collector_cfg: "${paths.config_dir}/collector_nerf_text_train.yaml"
     subfolder: "train"
+    img_id_range: [0, 1000]
+    # img_id_range: [2, 3]
 
   eval:
     collect_images: False
@@ -28,6 +37,7 @@ train:
   device: "cuda"
   epochs: 1000
   lr: 0.001
+  reg_coeff: 0.001
   data_loader_params:
     batch_size: 131072
     shuffle: True
@@ -35,7 +45,10 @@ train:
     persistent_workers: True
     pin_memory: True
   save_every: 1
-  load: True
+  save_model: False
+  save_text: True
+  eval_model: False
+  load: False
 
 eval:
   device: "cuda"
@@ -48,7 +61,7 @@ model:
   # encoder_x:
   #   type: "None"
   #   kwargs:
-  #     input_dim: 1
+  #     dim: 1
 
   encoder_x:
     type: "frequency"
@@ -61,10 +74,26 @@ model:
   #   kwargs:
   #     input_dim: 2
 
+  # encoder_uv:
+  #   type: "None"
+  #   kwargs:
+  #     dim: 1
+
+  # encoder_uv:
+  #   type: "None"
+  #   kwargs:
+  #     dim: 2
+
+  # encoder_uv:
+  #   type: "frequency"
+  #   kwargs:
+  #     dim: 2
+  #     n_levels: 8
+
   encoder_uv:
-    type: "frequency"
+    type: "multi_res_hash_grid"
     kwargs:
       dim: 2
-      n_levels: 10
-
-  #     num_levels: 4
+      n_levels: 16
+      n_features_per_level: 2
+      finest_resolution: "${collect.texture_res}/2"
