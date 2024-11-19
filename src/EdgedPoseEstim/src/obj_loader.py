@@ -23,8 +23,13 @@ class ObjLoader:
         for pose in poses:
             obj = obj_ref.clone()
 
-            obj.pose = pose[0]
-            # obj.pose = Pose(T=torch.tensor(pose))
+            # import ipdb
+            #
+            # ipdb.set_trace()
+            if pose[0].__class__ == Pose:
+                obj.pose = pose[0]
+            else:
+                obj.pose = Pose(T=torch.tensor(pose))
             objects.append(obj)
         return objects
 

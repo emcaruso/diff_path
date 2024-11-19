@@ -16,24 +16,26 @@ paths:
 
 save_name: "cvl1"
 
+crop: True
+
 objects:
   - "cj_machined"
   - "cj_unmachined"
 
 normalization:
   color_correction: False
-  exposure_time_ref: 20000
+  exposure_time_ref: 40000
 
 led_amp: 1.0
 
 collect_manual:
   # signal_period: 100000
   signal_period: 500000
-  exposure_time: 20000
+  exposure_time: 40000
 
 collect_track:
   signal_period: 100000
-  exposure_time: 20000
+  exposure_time: 40000
   range_half: 40
 
 collect_sequence:

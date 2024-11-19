@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import torch
 from utils_ema.blender_utils import launch_blender_script, get_blend_file
+from utils_ema.image import Image
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -93,3 +94,16 @@ class Saver:
             [self.cfg.config_path],
         )
         pass
+
+    def save_camera_images(self, renderer, cameras, objects, images):
+        # get pixels  of edges
+        for i, cam in enumerate(cameras):
+            for frame, obj in enumerate(objects):
+                img_synth = renderer.get_sobel_synth(cam, obj)
+                Image.merge_images(img_synth, images[i][frame], weight=0.25).save(
+                    os.path.join(
+                        self.cfg.paths.data_out_dir,
+                        "images",
+                        f"cam_{i}_frame_{frame}.png",
+                    )
+                )

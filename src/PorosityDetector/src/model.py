@@ -22,7 +22,8 @@ class Model(torch.nn.Module):
 
         model = smp.Unet(
             encoder_name=self.cfg.train.model.name,
-            in_channels=self.cfg.train.model.input_channels,
+            encoder_weights=self.cfg.train.model.encoder_weights,
+            in_channels=eval(self.cfg.train.model.input_channels),
             classes=1,
             activation="sigmoid",
             encoder_depth=self.cfg.train.model.encoder_depth,

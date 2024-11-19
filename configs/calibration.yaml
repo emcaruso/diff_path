@@ -31,11 +31,18 @@ intrinsics_calibration:
   name: "Intrinsics calibration"
   do: False
   generate_data:
-    do: True
+    do: False
     per_cam: True
     automatic: True
     dist_thresh_auto: 10000 # if automaic
-    exposure_time: 5000
+    basler_params:
+      sRGB: True
+      pixel_format: BayerRG8
+      # pixel_format: Mono8
+      # pixel_format: RGB8
+      exposure_time: 5000
+      signal_period: 1000
+
   paths:
     out_dir: "${paths.out_dir}/intrinsics" # DON'T CHANGE!
     in_dir: "${paths.in_dir}/intrinsics" # DON'T CHANGE!
@@ -55,7 +62,12 @@ global_calibration:
     per_cam: False
     automatic: False
     dist_thresh_auto: 10000 # if automaic
-    exposure_time: 10000
+    basler_params:
+      sRGB: True
+      pixel_format: BayerRG8
+      # pixel_format: Mono8
+      # pixel_format: RGB8
+      exposure_time: 20000
   paths:
     out_dir: "${paths.out_dir}/global" # DON'T CHANGE!
     in_dir: "${paths.in_dir}/global" # DON'T CHANGE!

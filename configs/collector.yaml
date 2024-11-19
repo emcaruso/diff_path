@@ -21,6 +21,8 @@ paths:
 
 save_name: "cvl1"
 
+crop: True
+
 objects:
   - "cj_machined"
   - "cj_unmachined"

@@ -3,34 +3,46 @@ protocol: "tcp"
 max_intensity: 3
 
 leds:
-  # led_0:
-  #   channel: 0
-  #   intensity: 0
-  #   info: { "position": "center-bottom-right", "cable_id": "W112" }
+  led_0:
+    channel: 0
+    intensity: 0
+    info: { "position": "bottom-0", "cable_id": "W112" }
   led_1:
     channel: 1
     intensity: 0
-    info: { "position": "far-bottom-right", "cable_id": "W104" }
+    info: { "position": "bottom-1", "cable_id": "W103" }
   led_2:
     channel: 2
     intensity: 0
-    info: { "position": "top-right", "cable_id": "W105" }
+    info: { "position": "bottom_2", "cable_id": "W104" }
   led_3:
     channel: 3
     intensity: 0
-    info: { "position": "near-bottom-right", "cable_id": "W105" }
+    info: { "position": "bottom_3", "cable_id": "W111" }
   led_4:
     channel: 4
     intensity: 0
-    info: { "position": "near-bottom-left", "cable_id": "W108" }
+    info: { "position": "bottom_4", "cable_id": "W102" }
   led_5:
     channel: 5
     intensity: 0
-    info: { "position": "far-bottom-left", "cable_id": "W107" }
+    info: { "position": "bottom_5", "cable_id": "W107" }
   led_6:
     channel: 6
     intensity: 0
-    info: { "position": "top-left", "cable_id": "W106" }
+    info: { "position": "bottom_6", "cable_id": "W108" }
+  led_7:
+    channel: 7
+    intensity: 0
+    info: { "position": "bottom_7", "cable_id": "W101" }
+  led_8:
+    channel: 8
+    intensity: 0
+    info: { "position": "high_0", "cable_id": "W105" }
+  led_9:
+    channel: 10
+    intensity: 0
+    info: { "position": "high_10", "cable_id": "W106" }
 
 leds_cc:
   led_0:

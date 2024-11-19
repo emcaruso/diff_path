@@ -97,13 +97,13 @@ class CollectorLoader:
         scene = dl.get_scene()
         return scene
 
-    def get_images_gen(self, overlap=False, device="cpu"):
+    def get_images_gen(self, overlap=False, device="cpu", dtype=torch.float32):
         images_dict = {}
         dir = self.sequence_dir if not overlap else self.sequence_show_dir
         for i, image_dir in enumerate(sorted(dir.iterdir())):
             images_dict[image_dir.stem] = {}
             for j, image_file in enumerate(sorted(image_dir.iterdir())):
-                image = Image(path=str(image_file), device=device)
+                image = Image(path=str(image_file), device=device, dtype=dtype)
                 yield image
 
     def get_image(self, cam_idx, frame_idx, overlap=False, device="cpu"):

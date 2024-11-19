@@ -1,268 +1,202 @@
-from trainer import Dataset
+from data_collector import DataCollector
 import cv2
-from utils_ema.texture import Texture
+import torchshow as ts
+import numpy as np
 from utils_ema.image import Image
+from utils_ema.texture import Texture
+from utils_ema.mesh import read_mesh, Mesh
 from pathlib import Path
 import torch
-import argparse
-from utils_ema.config_utils import load_yaml
-from utils_ema.general import load_class_from_path
-from data_collector import DataCollector
+from torch.utils.data import DataLoader
+from model import Model
+from utils_ema.torch_utils import DiceLoss, set_seed
+from tqdm import tqdm
+import os
+import wandb
+from dataset import Dataset
+from trainer import Trainer
 
 
 class Evaluator:
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.dc = DataCollector(self.cfg)
         self.device = torch.device(self.cfg.eval.device)
+        set_seed(self.cfg.train.seed)
+        self.mask, self.mask_idxs = Trainer.mask_data(
+            self.cfg.paths.mask_path,
+            self.device,
+            self.cfg.train.patch_size,
+            self.cfg.train.stride_factor,
+            self.cfg.collect.min_patch_ratio,
+        )
+        self.patches_shape = (
+            Image(self.mask)
+            .patchify(self.cfg.train.patch_size, self.cfg.train.stride_factor)
+            .shape
+        )
+        # self._mesh_to_textures()
 
-    def evaluate_nerf(self):
-        # get distmap
-        # save
-        # show
-        pass
+    def _mesh_to_textures(self):
 
-    @staticmethod
-    # def gaussian_weights(tensor, mean=0.4, std=0.7):
-    def gaussian_weights(tensor, mean=1.0, std=2.0):
-        # def gaussian_weights(tensor, mean=None, std=None):
-        # Compute the mean and standard deviation of the tensor
-        if mean is None:
-            mean = torch.mean(tensor)
-        if std is None:
-            std = torch.std(tensor)
+        # load mesh
+        mesh = read_mesh(self.cfg.paths.mesh_path)
 
-        # Create weights using a Gaussian-like distribution around the mean
-        weights = torch.exp(-0.5 * ((tensor - mean) / std) ** 2)
-        weights = weights / weights.max()
-        # weights = torch.pow(weights, 4)
-        # print(weights.max())
-        # print(weights.min())
-        # Image(weights).show()
+        # get area texture
+        self.area_tex = mesh.get_texture_3darea(self.mask.shape[0])
 
-        return weights
+    def load_model(self, model_path):
+        model = Model(self.cfg)
+        model.load_state_dict(torch.load(model_path))
+        model.to(self.device)
+        return model
 
-    @staticmethod
-    def _filter_custom(image):
+    def _get_generator(self, folder):
+        for img_path in sorted(folder.iterdir()):
+            tex = Image(path=str(img_path))
+            yield tex
 
-        kernel = torch.tensor(
-            [
-                [1, 1, 1, 1, 1],
-                [1, -1.78, -1.78, -1.78, 1],
-                [1, -1.78, -1.78, -1.78, 1],
-                [1, -1.78, -1.78, -1.78, 1],
-                [1, 1, 1, 1, 1],
-            ]
-        ).float()
+    def _get_eval_textures_generator(self, idx):
+        out_dir = os.path.join(
+            self.cfg.paths.save_data, self.cfg.collect.eval.subfolder
+        )
+        out_dir_tex = Path(os.path.join(out_dir, "textures"))
+        # load textures from out_dir_tex path
+        textures = []
+        tex_dir = sorted(out_dir_tex.iterdir())[idx]
+        tex_paths = sorted(tex_dir.iterdir())
+        return Image(path=str(tex_paths[0])), Image(path=str(tex_paths[-1]))
+        # tex =
+        # yield i, tex
 
-        image_filt = image.filter_custom(kernel)
-        image_filt = image_filt.clamp(min=0)
-        image_filt = image_filt.mean(dim=-1).unsqueeze(-1)
-        # image_filt -= image_filt.min()
-        image_filt /= image_filt.max()
-        return Image(image_filt)
+    # def _get_eval_textures_generator(self):
+    #     out_dir = os.path.join(
+    #         self.cfg.paths.save_data, self.cfg.collect.eval.subfolder
+    #     )
+    #     out_dir_tex = Path(os.path.join(out_dir, "textures"))
+    #     # load textures from out_dir_tex path
+    #     return [self._get_generator(folder) for folder in sorted(out_dir_tex.iterdir())]
+    #     generator = self._get_generator(folder)
 
-    def evaluate_trivial(self):
+    def _get_data_loader(self, mode, train=False):
+        dataset = Dataset(self.cfg, mode, train=train)
+        data_loader = DataLoader(dataset, **self.cfg[mode].data_loader_params)
+        return data_loader
 
-        with torch.no_grad():
-
-            weights = []
-            losses = []
-            cam_id = 0
-            CollectorLoader = load_class_from_path(
-                Path(self.cfg.paths.collector_dir, "load.py"), "CollectorLoader"
+    def _compute_images(self):
+        data_load_train = self._get_data_loader("train", train=True)
+        data_load_eval = self._get_data_loader("eval", train=False)
+        imgs = []
+        texs = []
+        for it in data_load_eval.dataset.idxs_all:
+            data_load_eval.dataset.idxs = [it]
+            eval_tex_0, eval_tex_1 = self._get_eval_textures_generator(
+                data_load_eval.dataset.idxs[0]
             )
-            print(self.cfg.paths.collector_dir)
 
-            cl_train = CollectorLoader(self.cfg.collect.train.collector_cfg)
-            cl_eval = CollectorLoader(self.cfg.collect.eval.collector_cfg)
-            dl = DataCollector(self.cfg)
+            model_dir = Path(self.cfg.paths.save_data) / "model"
+            if self.cfg.eval.model == "ensemble":
+                model_paths = [p for p in sorted(model_dir.iterdir())]
+            else:
+                model_paths = [model_dir / (self.cfg.eval.model + ".pth")]
 
-            cams, objs_train, _ = dl._get_cams_objs_imgs(self.cfg.collect.train)
-            _, objs_eval, _ = dl._get_cams_objs_imgs(self.cfg.collect.eval)
-            cam = list(cams.values())[cam_id]
-            res_fact = 1
-            cam.intr.resize_pixels(res_fact)
-            # poses
-            poses_train = cl_train.get_poses()
-            x_values = [pose[cam_id].location()[0].item() for pose in poses_train]
-            poses_eval = cl_eval.get_poses()
+            if self.cfg.eval.ensemble_n is None and self.cfg.eval.model:
+                self.cfg.eval.ensemble_n = len(model_paths)
 
-            for img_id, pose_eval in enumerate(poses_eval):
+            # wandb
+            if self.cfg.wandb.disabled:
+                os.environ["WANDB_DISABLED"] = "true"
+                wandb.init(mode="disabled")
+            else:
+                wandb.init(
+                    project=self.cfg.wandb.project + "_eval", config=dict(self.cfg)
+                )
 
-                if img_id == len(poses_eval) - 1:
+            mask = Texture.init_from_path(self.cfg.paths.mask_path).gray().unsqueeze(-1)
+
+            final_pred = torch.zeros(self.patches_shape, device=self.device)
+            for i in tqdm(range(self.cfg.eval.ensemble_n), desc="models"):
+                # for i, model_path in enumerate(tqdm(model_paths, desc="models")):
+                model_path = model_paths[i]
+
+                model = self.load_model(model_path)
+
+                model.eval()
+                # if epoch % self.cfg.train.eval_every == 0:
+                with torch.no_grad():
+
+                    ids = []
+                    y_list = []
+                    for x, _, id in tqdm(data_load_eval, leave=False):
+                        x = x.to(self.device, non_blocking=True)
+                        mask = x > 0
+                        x = data_load_train.dataset.norm(x)
+                        y_hat = model(x)
+                        y_hat *= mask
+
+                        if self.cfg.eval.show_patches:
+                            ts.show(x + y_hat * 2)
+
+                        ids.append(id)
+                        y_list.append(y_hat)
+
+                    ids = torch.cat(ids).to(self.device)
+                    y_list = torch.cat(y_list).to(self.device).permute(0, 2, 3, 1)
+                    # threshold
+                    y_list = (y_list > 0.5).float()
+
+                    # final_pred[ids] += y_list.permute(0, 2, 3, 1)
+
+                    # updates = torch.ones_like(
+                    #     ids, dtype=y_list.dtype
+                    # )  # Tensor of +1 for each index
+                    # y_list.index_add_(0, ids, updates)
+
+                    b, W, H, _ = final_pred.shape
+                    N = len(ids)
+                    final_pred_flat = final_pred.view(b, -1)  # Shape [b, W*H*1]
+                    y_list_flat = y_list.view(N, -1)  # Shape [N, W*H*1]
+                    final_pred_flat.index_add_(0, ids, y_list_flat)
+                    final_pred = final_pred_flat.view(b, W, H, 1)
+
+            # threshold
+            # final_pred = final_pred > self.cfg.train.eval_thresh
+            # final_pred = final_pred.float()
+            img = Image.patches_to_image(
+                final_pred,
+                self.cfg.train.stride_factor,
+                self.mask.shape[0],
+                self.mask.shape[1],
+                max_interp=True,
+                device=final_pred.device,
+            )
+            img *= self.mask
+            img /= self.cfg.eval.ensemble_n
+            img = img.float()
+            img = img > self.cfg.eval.eval_thresh
+            texs.append(Image(eval_tex_0.img + eval_tex_1.img))
+            # img_show = Image.merge_images(img.cpu(), tex.img, 0.5)
+            imgs.append(Image(img))
+
+        return imgs, texs
+
+        # while True:
+        #     img.show(wk=0)
+        #     tex.show(wk=0)
+        #
+
+    def evaluate(self):
+
+        preds, texs = self._compute_images()
+        for i in range(len(preds)):
+
+            num_clusters, centroids, multi_mask = preds[i].process_clusters()
+
+            colored_image = Image.get_multimask_with_colormap(multi_mask)
+            while True:
+                k = colored_image.show()
+                if k == ord("q"):
                     break
-
-                x_eval = pose_eval[cam_id]
-                # get index of closest x in x_values to x_eval
-                closest_x = min(
-                    x_values, key=lambda x: abs(x - x_eval.location()[0].item())
-                )
-                closest_idx = x_values.index(closest_x)
-
-                # get image with closest idx
-                img_train = cl_train.get_image(cam_id, closest_idx)
-                img_eval = cl_eval.get_image(cam_id, img_id)
-
-                # resize
-                img_train.resize(
-                    img_train.resolution() * res_fact, interp=cv2.INTER_NEAREST
-                )
-                img_eval.resize(
-                    img_eval.resolution() * res_fact, interp=cv2.INTER_NEAREST
-                )
-
-                # for i in range(100):
-                #     img_train.show()
-                #     img_eval.show()
-                #
-                uvs_train, vals_train = dl._collect_uvs_and_img_vals(
-                    cam, objs_train[cam_id][closest_idx], img_train
-                )
-                uvs_eval, vals_eval = dl._collect_uvs_and_img_vals(
-                    cam, objs_eval[cam_id][img_id], img_eval
-                )
-
-                # debug texture
-                texture_train = Texture.init_from_uvs(
-                    uvs_train, vals_train, self.cfg.collect.texture_res * res_fact
-                )
-                texture_eval = Texture.init_from_uvs(
-                    uvs_eval, vals_eval, self.cfg.collect.texture_res * res_fact
-                )
-
-                # fill
-                for i in range(7):
-                    texture_train = texture_train.fill_black_pixels(5)
-                    texture_eval = texture_eval.fill_black_pixels(5)
-
-                # texture_train.show()
-                texture_eval.show()
-                # texture_train_sobel = texture_train.prewitt()
-                # texture_eval_sobel = texture_eval.prewitt()
-                # get kernel to find black circles
-                texture_train_sobel = self._filter_custom(texture_train)
-                texture_eval_sobel = self._filter_custom(texture_eval)
-                #
-                texture_train_sobel.show()
-                texture_train_sobel.img = torch.min(
-                    texture_train_sobel.img, texture_eval_sobel.img
-                )
-                texture_train_sobel.show()
-
-                # get pixels where both texture_train and texture_eval are not 0
-                mask_pixels = torch.logical_and(  # noqa
-                    texture_train.img != 0, texture_eval.img != 0
-                )
-                pixels = torch.nonzero(mask_pixels)
-                loss = torch.zeros_like(texture_train.img)
-                loss[pixels[:, 0], pixels[:, 1]] = torch.pow(
-                    torch.abs(
-                        texture_train_sobel.img[pixels[:, 0], pixels[:, 1]]
-                        - texture_eval_sobel.img[pixels[:, 0], pixels[:, 1]]
-                    ),
-                    2,
-                )
-                # loss = torch.pow(loss + 0.01, 0.2)
-                # loss = loss / torch.max(loss)
-                # kernel = torch.tensor(
-                #     [
-                #         [1, 1, 1, 1, 1],
-                #         [1, -0.89, -0.89, -0.89, 1],
-                #         [1, -0.89, -0.89, -0.89, 1],
-                #         [1, -0.89, -0.89, -0.89, 1],
-                #         [1, 1, 1, 1, 1],
-                #     ]
-                # ).float()
-                # loss = Image(loss).filter_custom(kernel=kernel)
-                # loss =Image(loss).sobel_diff(kernel_size=5).img
-
-                # loss = Image(loss).sobel_diff(kernel_size=5).img
-                loss = loss / loss.max()
-                # loss = loss.clamp(0, 0.002)
-                # loss = loss / loss.max()
-                # exclude reflections
-                W = self.gaussian_weights(texture_train.img)
-                W = W * 1.0
-                # W1 = (texture_eval_sobel.img).clamp(0, 0.05)
-                # W1 = W1 / W1.max()
-                # highlight darker pixels
-                W2 = (-(texture_eval.img)) + 1
-                W2 = torch.pow(W2, 4).clamp(0, 0.4)
-                W2 = W2 / W2.max()
-                W2 = W2 * 0
-                W_TOT = W
-                W_TOT = W_TOT / W_TOT.max()
-
-                weights.append(W_TOT)
-                # loss = W * loss
-
-                # loss *= 4
-
-                texture_eval.show()
-                texture_train.show()
-                print("PORCODDIOOOOOOOOOOOO")
-                Image(W).show()
-                # Image(W1).show()
-                # Image(W2).show()
-                # exit(1)
-                Image(loss).show()
-                # Image(W_TOT).show()
-                # Image(loss * W_TOT).show()
-
-                losses.append(loss)
-
-                # img = torch.abs(texture_train.img - texture_eval.img)
-                # Image(img).show()
-
-            losses = torch.stack(losses, dim=-1)
-            weights = torch.stack(weights, dim=-1)
-            weighted_mean = torch.sum(losses * weights, dim=-1)
-            weighted_mean = weighted_mean / torch.max(weighted_mean)
-            # Image(weighted_mean).show()
-            # Image(weighted_mean).show()
-            #
-
-            Image(weighted_mean).save("/home/emcarus/Desktop/heatmap.png")
-            texture_eval.save("/home/emcarus/Desktop/eval.png")
-            for i in range(100):
-                Image(weighted_mean).show()
-                texture_eval.show()
-                texture_train.show()
-
-            #     # Image(torch.mean(losses, dim=-1)).show()
-            #     Image(weighted_mean).show()
-            #     texture_eval.show(img_name="AO")
-            #
-            # import ipdb
-            #
-            # ipdb.set_trace()
-
-            # get eval pose
-
-            # get closest pose
-
-            # get image with closest pose
-            #
-            # loss
-
-            # get distmap
-            # save
-            # show
-            pass
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config_path")
-    parser.add_argument("--mode", default="trivial")
-    opt = parser.parse_args()
-
-    cfg = load_yaml(opt.config_path)
-    e = Evaluator(cfg)
-
-    if opt.mode == "trivial":
-        e.evaluate_trivial()
-    else:
-        e.evaluate_nerf()
+                texs[i].show()
+                if k == ord("q"):
+                    break

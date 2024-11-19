@@ -4,11 +4,18 @@ paths:
   led_cfg: "${paths.config_dir}/leds.yaml"
   mesh_path: "${oc.env:YAML_DIR}/../data/scenes/Basler/meshes/cj_lowpoly.obj"
   save_data: "${oc.env:YAML_DIR}/../data/${save_name}/porosity_detector"
+  mask_path: "${oc.env:YAML_DIR}/../data/scenes/Basler/meshes/mask_machined.png"
 
 save_name: "cvl1"
 
+wandb:
+  project: "porosity"
+  disabled: False
+  log_images_eval: True
+
 collect:
   # texture_res: 8192
+  # ciao io so
   texture_res: 4096
   # texture_res: 3000
   #texture_res: 2800
@@ -19,55 +26,152 @@ collect:
     collect_images: False
     # range_pose_ids: [0, 300]
     range_pose_ids: null
-    collect_training_data: True
+
+    collect_training_data: False
+    compute_textures: False
+    has_labels: False
+
     # type: "collect_manual_while_track"
     type: "collect_video"
     collector_cfg: "${paths.config_dir}/collector_porosity_detector_train.yaml"
     subfolder: "train"
     img_id_range: [0, 99999]
-    reset: False
-
+    masked: True
   eval:
     collect_images: False
     # range_pose_ids: [0, 300]
     range_pose_ids: null
-    collect_training_data: False
+
+    collect_training_data: True
+    compute_textures: False
+    has_labels: True
+
     # type: "collect_manual_while_track"
     type: "collect_video"
     collector_cfg: "${paths.config_dir}/collector_porosity_detector_eval.yaml"
     subfolder: "eval"
     img_id_range: [0, 99999]
-    reset: False
+    masked: True
+
+  min_patch_ratio: 0.08
+
+eval:
+  device: cuda
+  masked: True
+  ensemble_n: 3
+  eval_thresh: 2
+  model: ensemble
+  show_patches: True
+  # model: model 7
+  data_loader_params:
+    batch_size: 128
+    shuffle: False
+    num_workers: 8
+    persistent_workers: False
+    pin_memory: False
 
 train:
   device: "cuda"
-  epochs: 1000
-  load: False
-  lr: 0.001
-  patch_size: 128
+  seed: 42
+  epochs: 11
+  load: True
+  lr: 0.0001
+  weight_decay: 0.0
+  patch_size: 160
+
+  # 3x3
   fill_iterations: 10
-  fill_pixels: 5
-  pore_size_range: [2, 20]
-  pow_range: [1, 2]
-  n_gaussians: 3
-  intensity_drop_range: [0.4, 0.8]
-  mask_thresh: 0.5
-  pore_generation_ratio: 0.5
+  fill_kernel: 3
+  fill_nn: 5
+
+  # # 5x5
+  # fill_iterations: 1
+  # fill_kernel: 9
+  # fill_nn: 5
+  #
+  normalize_colors: True
+  channels: 1
+  concatenate_mask: False
+
+  loss:
+    dice:
+      weight: 0.
+    bce:
+      weight: 0.
+      # weight_background: 0.1
+    tversky:
+      weight: 1.
+      params:
+        mode: binary
+        alpha: 0.8
+        beta: 0.2
+        from_logits: False
+
+  aug_x:
+    ColorJitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+    GaussianBlur:
+      kernel_size: [3, 5]
+      sigma: [0.00001, 1.]
+    # GaussianNoise:
+    #   sigma: 0.03
+
+  aug_xy:
+    RandomVerticalFlip:
+      p: 0.5
+    RandomHorizontalFlip:
+      p: 0.5
+    RandomResize:
+      min_size: ${train.patch_size}
+      max_size: 224
+    RandomRotation:
+      degrees: 3
+    RandomCrop:
+      size: ${train.patch_size}
+
+  pore_gen:
+    pore_size_range: [1.4, 2.0]
+    n_gaussians: 3
+    intensity_drop_range: [0.3, 0.7]
+    # intensity_drop_range: [0.88, 0.9]
+    # pore_generation_ratio: 0.9
+    pore_generation_ratio: 1.0
+    thresh_intensity: 0.17
+    noise_intensity: 0.2
+    p_flat: 0.1
+    sharp_factor_range: [1, 2]
+    pow_range: [10, 11]
+    adaptive_prob: False
+    p_mul: 0.6
+
+  mask_thresh: 0.45
+  pred_thresh: 0.5
   eval_every: 10
-  stride_factor: 0.5
-  chunk_size_eval: 64
-  dice_weight: 0.5
+  # stride_factor: 0.5
+  # stride_factor: 0.75
+  stride_factor: 0.8
+  # stride_factor: 1.0
+  demo_pores: False
+  save_model: True
+  show: True
 
   model:
     name: "resnet18"
-    input_channels: 3
-    encoder_depth: 3
-    decoder_channels: [128, 64, 32]
+    input_channels: ${train.channels} + ${train.concatenate_mask}
+    encoder_depth: 2
+    decoder_channels: [128, 16]
     decoder_use_batchnorm: "True"
     load_weights: True
+    dropout: 0.0
+    # encoder_weights: null
+    encoder_weights: "imagenet"
   data_loader_params:
     batch_size: 64
     shuffle: True
     num_workers: 8
     persistent_workers: False
     pin_memory: False
+
+  ensemble_models: 8

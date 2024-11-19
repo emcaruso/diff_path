@@ -84,15 +84,24 @@ class Program:
         loss_total = []
 
         # for each cam
-        for i, cam in enumerate(self.scene.get_cams()):
+        cams = self.scene.get_cams()
+        for i, cam in enumerate(cams):
 
-            # if i == 0:
+            # if i == 0 or i == len(cams) - 1:
             #     continue
-
+            #
             # for each distance map
-            for frame, distance_map in enumerate(self.dist_maps[i]):
+            dist_maps = self.dist_maps
+            for frame, distance_map in enumerate(dist_maps[i]):
 
-                # if frame == 0:
+                # if frame == 0 or frame == len(dist_maps[i]) - 1:
+                #     w = 1
+                # else:
+                #     w = 5
+                #
+                # if frame == 0 or frame == len(dist_maps[i]) - 1:
+                #     # if frame == len(dist_maps[i]) - 1:
+                #     # if frame == 0:
                 #     continue
 
                 torch.cuda.empty_cache()
@@ -262,14 +271,14 @@ class Program:
                 )
                 masks.append(torch.ones(3, device=board.pose.position.device))
 
-        for obj in self.objects:
-            parameters.append(
-                {"params": obj.pose.position, "lr": self.cfg.opt.lr_pos_obj}
-            )
-            masks.append(torch.ones(3, device=obj.pose.position.device))
-            if self.cfg.obj_only_x:
-                masks[-1][1:] = 0
-
+        # for obj in self.objects:
+        #     parameters.append(
+        #         {"params": obj.pose.position, "lr": self.cfg.opt.lr_pos_obj}
+        #     )
+        #     masks.append(torch.ones(3, device=obj.pose.position.device))
+        #     if self.cfg.obj_only_x:
+        #         masks[-1][1:] = 0
+        #
         for p in parameters:
             p["params"].requires_grad = True
 
@@ -337,6 +346,9 @@ class Program:
             self.saver.overwrite_object_poses(self.objects)
             self.saver.save_board_poses(self.scene.boards)
             self.saver.update_blender(self.cfg)
+            self.saver.save_camera_images(
+                self.renderer, self.scene.get_cams(), self.objects, self.images
+            )
 
     def realing(self):
         r = Realigner(self.cfg)

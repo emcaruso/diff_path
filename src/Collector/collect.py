@@ -24,7 +24,7 @@ class Collector:
     def __init__(self, cfg_path, led_cfg_path):
         self.cfg_path = cfg_path
         self.cfg = load_yaml(cfg_path)
-        self.fe = frame_extractor(sRGB=True)
+        self.fe = frame_extractor(sRGB=True, crop=self.cfg.crop)
 
         # load data pose estimator
         f = load_function_from_path(
@@ -91,6 +91,12 @@ class Collector:
                 )
                 time.sleep(self.led_cfg.test.time)
                 self.lc.led_off(channel=v.channel)
+
+    def show_streams(self):
+        self.fe.start_cams()
+        while True:
+            images = self.fe.grab_multiple_cams()
+            Image.show_multiple_images(images, wk=1, name="cam_copy")
 
     def show_references(self):
         self.fe.start_cams()
@@ -211,13 +217,11 @@ class Collector:
             os.makedirs(out_dir)
 
         for cam_id in range(len(images)):
-
             # save image
             image = images[cam_id]
             o_dir = os.path.join(out_dir, "sequences", "Cam_" + str(cam_id).zfill(3))
             if not os.path.exists(o_dir):
                 os.makedirs(o_dir)
-            image.type(torch.uint8)
             image.save(os.path.join(o_dir, str(frame_id).zfill(3) + ".png"))
 
             # save image show
@@ -563,7 +567,7 @@ class Collector:
 
         return True
 
-    def collect_video(self, debug=True, instant_save=True, range_ids=None):
+    def collect_video(self, debug=True, instant_save=False, range_ids=None):
 
         # clear data
         shutil.rmtree(self.cfg.paths.captured_dir, ignore_errors=True)
@@ -607,6 +611,8 @@ class Collector:
                     break
 
         # consequent frames
+        image_list = []
+        image_show_list = []
         current_id = torch.zeros(len(self.cams), dtype=torch.int32)
         if self.cfg.collect_video.end == "pose":
             for frame_id in itertools.count():
@@ -621,6 +627,7 @@ class Collector:
                 images = self.fe.grab_multiple_cams()
 
                 images_undist = self.preprocess(images)
+
                 rang = self._get_range(current_id)
                 if range_ids is not None:
                     rang[1].clip(max=range_ids[1])
@@ -630,6 +637,7 @@ class Collector:
                         images_undist, rang=rang, debug=debug, synch=False
                     )
                 )
+
                 print("Best pose id: ", best_pose_id)
                 current_id = best_pose_id
 
@@ -643,9 +651,17 @@ class Collector:
                 else:
                     if instant_save:
                         self.save_images_single(images_undist, imgs_show, frame_id)
+                    else:
+                        for i in images_undist:
+                            i.set_type(torch.uint8)
+                        for i in imgs_show:
+                            i.set_type(torch.uint8)
+                        image_list.append(images_undist)
+                        image_show_list.append(imgs_show)
                     pose_list.append(pose)
-                    print(pose_list)
 
+        if not instant_save:
+            self.save_images(image_list, image_show_list)
         self.save_data(pose_list, None, save_blender=False)
 
     def _get_range(self, current_id):

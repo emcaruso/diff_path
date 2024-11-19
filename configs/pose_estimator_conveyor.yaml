@@ -24,14 +24,14 @@ render_tables:
     location: [0, 0, 0]
     euler: [0, 0, 0]
   ranges:
-    x: [-0.18, 0.18]
+    x: [-0.15, 0.20]
     y: null
     z: null
     e0: null
     e1: null
     e2: null
   intervals:
-    x: 2
+    x: 5
     y: null
     z: null
     e0: null
