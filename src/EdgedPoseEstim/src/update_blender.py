@@ -25,10 +25,13 @@ obj = bpy.data.objects[cfg.obj_name]
 poses_obj_path = os.path.join(cfg.paths.data_out_dir, "poses_obj.npy")
 poses_obj = np.load(poses_obj_path, allow_pickle=True)
 clear_animation_data(obj)
+set_object_pose(obj, Pose())
+obj.keyframe_insert(data_path="location", frame=0)
+obj.keyframe_insert(data_path="rotation_euler", frame=0)
 for i, pose in enumerate(poses_obj):
     set_object_pose(obj, pose)
-    obj.keyframe_insert(data_path="location", frame=i)
-    obj.keyframe_insert(data_path="rotation_euler", frame=i)
+    obj.keyframe_insert(data_path="location", frame=i + 1)
+    obj.keyframe_insert(data_path="rotation_euler", frame=i + 1)
 
 # board poses
 board = bpy.data.objects["charuco_board"]

@@ -1,4 +1,6 @@
 import os, sys
+from pathlib import Path
+from tqdm import tqdm
 import argparse
 import numpy as np
 import torch
@@ -24,7 +26,9 @@ class Collector:
     def __init__(self, cfg_path, led_cfg_path):
         self.cfg_path = cfg_path
         self.cfg = load_yaml(cfg_path)
-        self.fe = frame_extractor(sRGB=True, crop=self.cfg.crop)
+        self.fe = frame_extractor(
+            sRGB=self.cfg.sRGB, crop=self.cfg.crop, strategy=self.cfg.strategy
+        )
 
         # load data pose estimator
         f = load_function_from_path(
@@ -52,21 +56,42 @@ class Collector:
             self.led_cfg = load_yaml(led_cfg_path)
             self.lc = LightController(self.led_cfg.ip_controller, self.led_cfg.protocol)
 
-    def prepare_normalization_data(self):
-        self.cc_gain = torch.ones((self.fe.n_devices, 3))
-        if self.cfg.normalization.color_correction:
-            d = load_yaml(
-                os.path.join(self.cfg.paths.color_correction_data_dir, "res.yaml")
-            )
-            for i, (k, v) in enumerate(d.items()):
-                self.cc_gain[i, :] = torch.tensor(v, dtype=torch.float64)
+        # prepare normalization data
+        self.prepare_normalization_data()
 
-        self.exp_gain = torch.ones(self.fe.n_devices)
-        if self.cfg.normalization.exposure_time_ref is not None:
-            ets = self.fe.get_exposure()
-            self.exp_gain = self.cfg.normalization.exposure_time_ref / torch.tensor(
-                ets, dtype=torch.float64
-            )
+    def init_collection(self):
+
+        # clear data
+        shutil.rmtree(self.cfg.paths.captured_dir, ignore_errors=True)
+        os.makedirs(self.cfg.paths.captured_dir)
+
+        # start cameras and prepare normalization
+        self.fe.start_cams(
+            signal_period=self.cfg.signal_period,
+            exposure_time=self.cfg.exposure_time,
+        )
+
+    def prepare_normalization_data(self):
+        try:
+            self.cc_gain = torch.ones((self.fe.n_devices, 3))
+            if self.cfg.normalization.color_correction:
+                d = load_yaml(
+                    os.path.join(self.cfg.paths.color_correction_data_dir, "res.yaml")
+                )
+                for i, (k, v) in enumerate(d.items()):
+                    self.cc_gain[i, :] = torch.tensor(v, dtype=torch.float64)
+
+            self.exp_gain = torch.ones(self.fe.n_devices)
+            if self.cfg.normalization.exposure_time_ref is not None:
+                ets = self.fe.get_exposure()
+                self.exp_gain = self.cfg.normalization.exposure_time_ref / torch.tensor(
+                    ets, dtype=torch.float64
+                )
+            print("Normalization data loaded!")
+        except:
+            self.cc_gain = torch.ones((self.fe.n_devices, 3))
+            self.exp_gain = torch.ones(self.fe.n_devices)
+            print("Normalization data NOT loaded!")
 
     def preprocess(self, images):
 
@@ -100,7 +125,6 @@ class Collector:
 
     def show_references(self):
         self.fe.start_cams()
-        self.prepare_normalization_data()
         idx = torch.tensor([0] * len(self.cams))
         while True:
             while True:
@@ -137,7 +161,7 @@ class Collector:
     #         if key==ord('q'):
     #             break
 
-    def save_blender(self):
+    def save_blender(self, asyncr=False):
         # save blender scene
         shutil.rmtree(self.cfg.paths.save_scene_dir, ignore_errors=True)
         os.makedirs(os.path.join(self.cfg.paths.save_scene_dir, "mitsuba_scene"))
@@ -154,9 +178,13 @@ class Collector:
             dirs_exist_ok=True,
         )
         blend_file = get_blend_file(self.cfg.paths.save_scene_dir)
+
+        save_blender_script = os.path.join(script_dir, "save_blender.py")
+        if asyncr:
+            save_blender_script = os.path.join(script_dir, "save_blender_async.py")
         launch_blender_script(
             blend_file,
-            os.path.join(script_dir, "save_blender.py"),
+            save_blender_script,
             arguments=[self.cfg.paths.save_dir],
         )
         # launch_blender_script(blend_file, os.path.join(script_dir,"save_blender.py"), arguments=[os.path.join(self.cfg.paths.pose_estimator_data_dir,"config.yaml")])
@@ -216,22 +244,27 @@ class Collector:
         if not os.path.exists(out_dir):
             os.makedirs(out_dir)
 
-        for cam_id in range(len(images)):
-            # save image
-            image = images[cam_id]
-            o_dir = os.path.join(out_dir, "sequences", "Cam_" + str(cam_id).zfill(3))
-            if not os.path.exists(o_dir):
-                os.makedirs(o_dir)
-            image.save(os.path.join(o_dir, str(frame_id).zfill(3) + ".png"))
+        if images is not None:
+            for cam_id in range(len(images)):
+                image = images[cam_id]
+                o_dir = os.path.join(
+                    out_dir, "sequences", "Cam_" + str(cam_id).zfill(3)
+                )
+                if not os.path.exists(o_dir):
+                    os.makedirs(o_dir)
+                image.save_parallel(
+                    os.path.join(o_dir, str(frame_id).zfill(3) + ".png")
+                )
 
-            # save image show
-            if images_show is not None:
+        # save image show
+        if images_show is not None:
+            for cam_id in range(len(images_show)):
                 o_dir_show = os.path.join(
                     out_dir, "sequences_show", "Cam_" + str(cam_id).zfill(3)
                 )
                 if not os.path.exists(o_dir_show):
                     os.makedirs(o_dir_show)
-                images_show[cam_id].save(
+                images_show[cam_id].save_parallel(
                     os.path.join(o_dir_show, str(frame_id).zfill(3) + ".png")
                 )
 
@@ -273,7 +306,15 @@ class Collector:
         cfg_path_out = os.path.join(self.cfg.paths.save_dir, "config.yaml")
         OmegaConf.save(self.cfg, cfg_path_out)
 
-    def save_data(self, pose_list, led_list, save_blender=True):
+    def save_data(
+        self,
+        pose_list,
+        led_list=None,
+        inthresh_list=None,
+        cam_list=None,
+        save_blender=True,
+        asyncr=False,
+    ):
 
         # SAVE
         if pose_list == []:
@@ -281,15 +322,27 @@ class Collector:
 
         # save data
         out_dir = self.cfg.paths.captured_dir
+
+        # save leds
         if led_list is not None:
             np.save(os.path.join(out_dir, "leds.npy"), led_list)
-        for i, pose in enumerate(pose_list):
-            pose_list[i] = pose_list[i]
+
+        # save poses
         np.save(os.path.join(out_dir, "poses.npy"), pose_list, allow_pickle=True)
+
+        # save poses in thresh
+        if inthresh_list is not None:
+            np.save(
+                os.path.join(out_dir, "in_thresh.npy"), inthresh_list, allow_pickle=True
+            )
+
+        # save cam list
+        if cam_list is not None:
+            np.save(os.path.join(out_dir, "cams.npy"), cam_list, allow_pickle=True)
 
         # # save blender
         if save_blender:
-            self.save_blender()
+            self.save_blender(asyncr=asyncr)
 
         # save cfg
         self._save_cfg()
@@ -432,8 +485,7 @@ class Collector:
 
     def collect_manual(self, debug=False):
         # collect
-        self.fe.start_cams(signal_period=self.cfg.collect_manual.signal_period)
-        self.prepare_normalization_data()
+        self.fe.start_cams(signal_period=self.cfg.signal_period)
         image_list = []
         image_show_list = []
         pose_list = []
@@ -467,10 +519,9 @@ class Collector:
     def collect_images_only(self):
         # collect
         self.fe.start_cams(
-            signal_period=self.cfg.collect_track.signal_period,
-            exposure_time=self.cfg.collect_track.exposure_time,
+            signal_period=self.cfg.signal_period,
+            exposure_time=self.cfg.exposure_time,
         )
-        self.prepare_normalization_data()
         image_list = []
         while True:
             images = self.fe.grab_multiple_cams()
@@ -497,10 +548,9 @@ class Collector:
     ):
         # collect
         self.fe.start_cams(
-            signal_period=self.cfg.collect_track.signal_period,
-            exposure_time=self.cfg.collect_track.exposure_time,
+            signal_period=self.cfg.signal_period,
+            exposure_time=self.cfg.exposure_time,
         )
-        self.prepare_normalization_data()
         image_list = []
         image_show_list = []
         pose_list = []
@@ -567,6 +617,32 @@ class Collector:
 
         return True
 
+    def _preliminary_posed(
+        self, range_ids=None, debug=False, leds="all", gamma_correction=1
+    ):
+        if self.lc is not None:
+            if leds == "all":
+                self.lc.all_leds_on(1.0)
+            elif leds == "first":
+                self.lc.led_on(0, 1.0, only=True)
+
+        while True:
+            images = self.fe.grab_multiple_cams()
+            if gamma_correction != 1:
+                images = [i.gamma_correction(gamma_correction) for i in images]
+            images_undist = self.preprocess(images)
+            rang = np.array([[0, 80]] * len(self.cams))
+            if range_ids is not None:
+                rang += range_ids[0]
+
+            imgs_show, pose, in_thresh, best_pose_id = self.pe.overlap_estimated_pose(
+                images_undist, rang=rang, debug=debug, synch=False
+            )
+
+            Image.show_multiple_images(imgs_show, wk=1)
+            if torch.all(in_thresh):
+                break
+
     def collect_video(self, debug=True, instant_save=False, range_ids=None):
 
         # clear data
@@ -574,41 +650,16 @@ class Collector:
         os.makedirs(self.cfg.paths.captured_dir)
 
         self.fe.start_cams(
-            # signal_period=self.cfg.collect_track.signal_period,
-            exposure_time=self.cfg.collect_track.exposure_time,
+            # signal_period=self.cfg.signal_period,
+            exposure_time=self.cfg.exposure_time,
         )
         v = eval(self.cfg.collect_track.velocity)
-        self.prepare_normalization_data()
 
         pose_list = []
 
-        time_1, time_2 = 0, 0
-
         # first frame
         if self.cfg.collect_video.init == "pose":
-            while True:
-                time_1 = time.time()
-
-                images = self.fe.grab_multiple_cams()
-
-                images_undist = self.preprocess(images)
-                rang = np.array([[0, 80]] * len(self.cams))
-                if range_ids is not None:
-                    rang += range_ids[0]
-
-                imgs_show, pose, in_thresh, best_pose_id = (
-                    self.pe.overlap_estimated_pose(
-                        images_undist, rang=rang, debug=debug, synch=False
-                    )
-                )
-
-                # time_2 = time.time()
-                # t = time_2 - time_1
-                # print(t)
-
-                Image.show_multiple_images(imgs_show, wk=1)
-                if in_thresh:
-                    break
+            self._preliminary_posed(range_ids=range_ids, debug=debug)
 
         # consequent frames
         image_list = []
@@ -617,9 +668,6 @@ class Collector:
         if self.cfg.collect_video.end == "pose":
             for frame_id in itertools.count():
 
-                time_2 = time.time()
-                t = time_2 - time_1
-                time_1 = time.time()
                 current_id = (current_id + int(v * t)).clip(
                     min=0, max=self.pe.n_poses - 1
                 )
@@ -664,13 +712,116 @@ class Collector:
             self.save_images(image_list, image_show_list)
         self.save_data(pose_list, None, save_blender=False)
 
-    def _get_range(self, current_id):
-        w = self.cfg.collect_track.range_half
-        w_t = (current_id + w).clip(max=self.pe.n_poses)
-        w_b = (current_id - w).clip(min=0)
+    def _get_range(self, current_id, velocity=0):
+        w = self.cfg.range_half
+        w_t = (current_id + velocity + w).int().clip(max=self.pe.n_poses)
+        w_b = (current_id + velocity - w).int().clip(min=0)
 
         rang = torch.stack((w_b, w_t), dim=1)
         return rang
+
+    def collect_nframes_from_pose(
+        self,
+        nframes,
+        time_delta=0.0,
+        with_leds=True,
+        range_ids=None,
+        instant_save=True,
+        show=True,
+        velocity=0,
+        debug=True,
+    ):
+        with torch.no_grad():
+
+            self.init_collection()
+
+            # first frame
+            if self.cfg.collect_video.init == "pose":
+                self._preliminary_posed(
+                    range_ids=range_ids, debug=debug, leds="first", gamma_correction=0.5
+                )
+
+            # collect n frames
+            images_undist_list = []
+            c = 1
+            led_list = [[self.lights[0]] * self.fe.n_devices]
+            for i in range(nframes):
+                t1 = time.time()
+
+                # grab images
+                images = self.fe.grab_multiple_cams()
+
+                # change led
+                if with_leds:
+                    self.lc.led_on(
+                        channel=self.lights[c].channel,
+                        amp=self.cfg.led_amp,
+                        only=True,
+                        wait=0.0,
+                    )
+                    if i != nframes - 1:
+                        self.lights[c].intensity = self.cfg.led_amp
+                        led_list.append([self.lights[c]] * self.fe.n_devices)
+                        c += 1
+                        # if c == len(self.lights):
+                        if c == 7:
+                            c = 0
+
+                images_undist = self.preprocess(images)
+
+                if instant_save:
+                    self.save_images_single(images_undist, None, i)
+                    pass
+                else:
+                    images_undist_list.append(images_undist)
+                print(f"collected {i+1} images")
+                if show:
+                    Image.show_multiple_images(images_undist, wk=1)
+                # grab images
+                images = self.fe.grab_multiple_cams()
+
+                t2 = time.time()
+                if t2 - t1 < time_delta:
+                    time.sleep(time_delta - (t2 - t1))
+
+            # load all saved images
+            pose_list = []
+            cam_list = []
+            inthresh_list = []
+            r = torch.tensor([[0, 100]] * self.fe.n_devices)
+            sequence_dir = Path(self.cfg.paths.captured_dir) / "sequences"
+            cam_ids_range = range(len(list(sequence_dir.glob("Cam_*"))))
+
+            for i in tqdm(range(nframes), desc="Estimate poses"):
+                imgs = []
+                cam_list.append(list(cam_ids_range))
+                for cam_id in cam_ids_range:
+
+                    path = (
+                        sequence_dir
+                        / ("Cam_" + str(cam_id).zfill(3))
+                        / (str(i).zfill(3) + ".png")
+                    )
+                    image = Image(path=str(path), device="cuda").gamma_correction(0.5)
+
+                    imgs.append(image)
+                img, pos, in_thresh, pose_id = self.pe.overlap_estimated_pose(
+                    imgs, synch=False, rang=r
+                )
+                self.save_images_single(None, img, i)
+                Image.show_multiple_images(img, wk=1)
+                r = self._get_range(pose_id, velocity=velocity)
+
+                pose_list.append(pos)
+                inthresh_list.append(in_thresh)
+            self.save_data(
+                pose_list,
+                led_list=led_list,
+                inthresh_list=inthresh_list,
+                cam_list=cam_list,
+                save_blender=True,
+                asyncr=True,
+            )
 
 
 if __name__ == "__main__":
@@ -683,5 +834,4 @@ if __name__ == "__main__":
     # collector.show_references()
     # collector.collect_manual()
     collector.test_leds()
-    collector.collect_while_tracking(manual=False)
-    # collector.collect_while_tracking(manual=True)
+    # collector.collect_while_tracking(manual=False)

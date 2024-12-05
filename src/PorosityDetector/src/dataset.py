@@ -55,44 +55,51 @@ class Dataset:
         self.idxs = [i for i in range(len(self.n))]
 
     def _compute_statistics(self):
-        stats_path = (
-            Path(self.cfg.paths.save_data) / self.subfolder / "patches" / "stats.npy"
-        )
-        if os.path.exists(stats_path):
-            stats = np.load(stats_path, allow_pickle=True).tolist()
+        if self.subfolder == "train":
+            stats_path = (
+                Path(self.cfg.paths.save_data)
+                / self.subfolder
+                / "patches"
+                / "stats.npy"
+            )
+            if os.path.exists(stats_path):
+                stats = np.load(stats_path, allow_pickle=True).tolist()
 
-        else:
-            stats = defaultdict(dict)
-            for ch in [1, 3]:
-                mean = torch.zeros(ch)
-                std = torch.zeros(ch)
-                for i in tqdm(
-                    range((self.n).sum()), desc="Computing statistics, ch: " + str(ch)
-                ):
-                    x = self.get_item(i)[0][:ch, ...]
-                    if x[x > 0].numel() == 0:
-                        continue
-                    mean += x.mean(dim=[1, 2])
-                    std += x.std(dim=[1, 2])
-                stats[ch]["mean"] = mean / sum(self.n)
-                stats[ch]["std"] = std / sum(self.n)
+            else:
+                stats = defaultdict(dict)
+                for ch in [1, 3]:
+                    mean = torch.zeros(ch)
+                    std = torch.zeros(ch)
+                    for i in tqdm(
+                        range((self.n).sum()),
+                        desc="Computing statistics, ch: " + str(ch),
+                    ):
+                        x = self.get_item(i)[0][:ch, ...]
+                        if x[x > 0].numel() == 0:
+                            continue
+                        mean += x.mean(dim=[1, 2])
+                        std += x.std(dim=[1, 2])
+                    stats[ch]["mean"] = mean / sum(self.n)
+                    stats[ch]["std"] = std / sum(self.n)
 
-            # save npy
-            np.save(stats_path, dict(stats), allow_pickle=True)
+                # save npy
+                np.save(stats_path, dict(stats), allow_pickle=True)
 
-        return stats
+            return stats
+        return None
 
     def normalize(self, x):
         return self.norm(x)
 
     def denormalize(self, x):
-        with torch.no_grad():
-            x = x.permute(0, 2, 3, 1)
-            mean = self.statistics[self.cfg.train.channels]["mean"].to(x.device)
-            std = self.statistics[self.cfg.train.channels]["std"].to(x.device)
-            x = x * std + mean
-            x = x.permute(0, 3, 1, 2)
-            return x
+        if self.statistics is not None:
+            with torch.no_grad():
+                x = x.permute(0, 2, 3, 1)
+                mean = self.statistics[self.cfg.train.channels]["mean"].to(x.device)
+                std = self.statistics[self.cfg.train.channels]["std"].to(x.device)
+                x = x * std + mean
+                x = x.permute(0, 3, 1, 2)
+                return x
 
     def _transforms_train(self, dictionary):
         transform_list = [getattr(v2, k)(**v) for k, v in dictionary.items()]
@@ -100,13 +107,14 @@ class Dataset:
         return T
 
     def _normalize_transf(self):
-        if not self.cfg.train.normalize_colors:
-            return lambda x: x
-        else:
-            mean = self.statistics[self.cfg.train.channels]["mean"]
-            std = self.statistics[self.cfg.train.channels]["std"]
-            T = v2.Compose([v2.Normalize(mean=mean, std=std)])
-            return T
+        if self.statistics is not None:
+            if not self.cfg.train.normalize_colors:
+                return lambda x: x
+            else:
+                mean = self.statistics[self.cfg.train.channels]["mean"]
+                std = self.statistics[self.cfg.train.channels]["std"]
+                T = v2.Compose([v2.Normalize(mean=mean, std=std)])
+                return T
 
     @staticmethod
     def _generate_covariance_matrix(eigenvalue_range):

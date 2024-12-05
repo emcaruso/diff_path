@@ -24,14 +24,14 @@ render_tables:
     location: [0, 0, 0]
     euler: [0, 0, 0]
   ranges:
-    x: [-0.15, 0.20]
+    x: [-0.15, 0.15]
     y: null
     z: null
     e0: null
     e1: null
     e2: null
   intervals:
-    x: 5
+    x: 3
     y: null
     z: null
     e0: null
@@ -41,6 +41,7 @@ render_tables:
   cam_collection: "estimated_poses"
   obj_name: "cj_lowpoly"
   obj_scale: 1
+
   # obj_scale: 0.99
 
 generate_bin:

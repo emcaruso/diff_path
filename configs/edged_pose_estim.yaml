@@ -24,16 +24,16 @@ opt:
   iterations: 100
 
   # l2
-  lr_scl_obj: 0.001
+  lr_scl_obj: 0.0002
   # lr_eul_obj: 0.0001
   # lr_pos_obj: 0.00002
-  lr_eul_obj: 0.0003
+  lr_eul_obj: 0.0002
   lr_pos_obj: 0.0002
   lr_eul_cam: 0.0001
   # lr_pos_cam: 0.00002
   # lr_eul_brd: 0.00001
-  lr_pos_cam: 0.0001
-  lr_eul_brd: 0.0001
+  lr_pos_cam: 0.0002
+  lr_eul_brd: 0.0002
   lr_pos_brd: 0.00001
   pow: "1"
 
@@ -71,15 +71,16 @@ opt:
   # reg_lambda: 1
   # reg_lambda: 0
   # reg_lambda: 0.2
-  reg_lambda: 0.01
+  reg_lambda: 0.0001
   # reg_lambda: 0.00001
 
 collect_images: False
 # canny_sigma: 0.75
-canny_sigma: 0.07
+canny_sigma: 0.06
 # canny_sigma: 0.04
 # canny_sigma: 1.5
-exp_distmap: 0.01
+# exp_distmap: 0.01
+exp_distmap: 0.1
 threshold_edge_synt: 0.7 # 3 kernel sobel
 # threshold_edge_synt: 15 # 5 kernel sobel
 # threshold_edge_synt: 1.
@@ -92,12 +93,12 @@ debug_edges: True
 debug_boards: True
 wk_edges: 0
 # obj_only_x: True
-obj_only_x: True
+obj_only_x: False
 obj_shared_rot: True
-# obj_shared_yz: False
-obj_fixed_e1e2: False
+obj_shared_yz: False
+obj_fixed_ele2: False
 opt_cams: True
-obj_scale: True
+obj_scale: False
 opt_boards: False
 images_only: False
 

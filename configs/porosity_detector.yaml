@@ -10,7 +10,7 @@ save_name: "cvl1"
 
 wandb:
   project: "porosity"
-  disabled: False
+  disabled: True
   log_images_eval: True
 
 collect:
@@ -42,8 +42,8 @@ collect:
     # range_pose_ids: [0, 300]
     range_pose_ids: null
 
-    collect_training_data: True
-    compute_textures: False
+    collect_training_data: False
+    compute_textures: True
     has_labels: True
 
     # type: "collect_manual_while_track"
@@ -58,10 +58,12 @@ collect:
 eval:
   device: cuda
   masked: True
-  ensemble_n: 3
-  eval_thresh: 2
+  ensemble_n: 1
+  eval_thresh_raw: 0.1
+  eval_thresh_precise: 2.
   model: ensemble
   show_patches: True
+  demo: False
   # model: model 7
   data_loader_params:
     batch_size: 128
@@ -73,7 +75,7 @@ eval:
 train:
   device: "cuda"
   seed: 42
-  epochs: 11
+  epochs: 6
   load: True
   lr: 0.0001
   weight_decay: 0.0
@@ -92,6 +94,7 @@ train:
   normalize_colors: True
   channels: 1
   concatenate_mask: False
+  use_scheduler: True
 
   loss:
     dice:

@@ -1,7 +1,6 @@
-
 paths:
   # calib_yaml: "${oc.env:YAML_DIR}/calibration.yaml"
-  calib_data_dir: "${oc.env:YAML_DIR}/../data/${save_name}/calib_data" 
+  calib_data_dir: "${oc.env:YAML_DIR}/../data/${save_name}/calib_data"
   leds_yaml: "${oc.env:YAML_DIR}/leds.yaml"
   # save_dir: "../data/light_calib_data/${save_name}"
   light_calib_dir: "${oc.env:YAML_DIR}/../src/LightCalib"
@@ -30,49 +29,63 @@ aruco:
 
 calib:
   signal_period: 100000
-  exp_time_ray_extraction: 800
-  batch_size: 75
+  exp_time_ray_extraction: 500
+  batch_size: 10
   std_thresh: 0.5
+  mean_thresh: 0.5
+  plot: True
+  load_data: True
+  leds:
+    - led_0
+    - led_1
+    - led_2
+    # - led_3
+    - led_4
+    - led_5
+    - led_6
+    - led_7
+    - led_8
+    - led_9
 
 # save_imgs: True
-led_intensity: 0.0001
-n_images: 3
+led_intensity: 0.06
+n_images: 4
 
 plane_estimator:
-  exposure_time: 15000
+  exposure_time: 30000
   signal_period: 1000
-  integrate_n_frames: 75
+  integrate_n_frames: 10
   position_thresh: 0.1
   orientation_thresh: 0.1
   aruco_pnp:
     aruco_cfg:
       dict_n: 4
       dict_size: 50
-      range_idxs: [0,19]
+      range_idxs: [0, 19]
 
     # LAPTOP
-    struct: 
+    struct:
       positions:
         - [-4, -9, -0.0023]
         - [-4, -7, -0.0023]
         - [-4, -5, -0.0023]
         - [-4, -3, -0.0023]
         - [-4, -1, -0.0023]
-        - [-4,  1, -0.0023]
-        - [-4,  3, -0.0023]
-        - [-4,  5, -0.0023]
-        - [-4,  7, -0.0023]
-        - [-4,  9, -0.0023]
-        - [ 4, -9, -0.0023]
-        - [ 4, -7, -0.0023]
-        - [ 4, -5, -0.0023]
-        - [ 4, -3, -0.0023]
-        - [ 4, -1, -0.0023]
-        - [ 4,  1, -0.0023]
-        - [ 4,  3, -0.0023]
-        - [ 4,  5, -0.0023]
-        - [ 4,  7, -0.0023]
-        - [ 4,  9, -0.0023]
+        - [-4, 1, -0.0023]
+        - [-4, 3, -0.0023]
+        - [-4, 5, -0.0023]
+        - [-4, 7, -0.0023]
+        - [-4, 9, -0.0023]
+        - [4, -9, -0.0023]
+        - [4, -7, -0.0023]
+        - [4, -5, -0.0023]
+        - [4, -3, -0.0023]
+        - [4, -1, -0.0023]
+        - [4, 1, -0.0023]
+        - [4, 3, -0.0023]
+        - [4, 5, -0.0023]
+        - [4, 7, -0.0023]
+        - [4, 9, -0.0023]
       eulers:
         - [0, 0, 90]
         - [0, 0, 90]
@@ -119,9 +132,9 @@ plane_estimator:
       marker_length: 1
       scale: 0.0172
       # scale: 0.0229
-      
+
     # TABLET
-    # struct: 
+    # struct:
     #   positions:
     #     - [-2, -4, -0.0023]
     #     - [-2, -2, -0.0023]
@@ -159,6 +172,5 @@ plane_estimator:
     #   marker_length: 1
     #   # scale: 0.02
     #   scale: 0.0229
-      
-    n_aruco_thresh: 0
 
+    n_aruco_thresh: 0

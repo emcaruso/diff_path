@@ -23,10 +23,22 @@ class DataCollector:
         self.device = torch.device(self.cfg.collect.device)
         self.data_nerf = None
 
+    def _close_leds(self):
+        script_path = str(
+            Path(self.cfg.paths.config_dir).parent / "scripts" / "leds_off.sh"
+        )
+        os.system(f"sh {script_path}")
+
+    def _open_leds(self):
+        script_path = str(
+            Path(self.cfg.paths.config_dir).parent / "scripts" / "leds_on.sh"
+        )
+        os.system(f"sh {script_path}")
+
     def _collect_images(self, dict_coll):
+        self._open_leds()
         # collector
         # use collector to collect images
-        print(self.cfg.paths.collector_dir)
         Collector = load_class_from_path(
             Path(self.cfg.paths.collector_dir, "collect.py"), "Collector"
         )
@@ -37,6 +49,8 @@ class DataCollector:
         elif dict_coll.type == "collect_manual_while_track":
             # cl.collect_while_tracking(manual=True, debug=True)
             cl.collect_manual()
+
+        self._close_leds()
 
         # copy save_dir content (folders and files) in save_dir parent
         save_dir = Path(load_yaml(dict_coll.collector_cfg).paths.save_dir)
@@ -135,9 +149,6 @@ class DataCollector:
         out_dir_patch = Path(out_dir / "patches")
         shutil.rmtree(out_dir_patch, ignore_errors=True)
         os.makedirs(out_dir_patch)
-        os.makedirs(str(out_dir_patch / "x"), exist_ok=True)
-        os.makedirs(str(out_dir_patch / "y"), exist_ok=True)
-        os.makedirs(str(out_dir_patch / "id"), exist_ok=True)
 
         for d in save_dir_coll.iterdir():
 
@@ -222,6 +233,9 @@ class DataCollector:
 
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
+        os.makedirs(str(out_dir_patch / "x"), exist_ok=True)
+        os.makedirs(str(out_dir_patch / "y"), exist_ok=True)
+        os.makedirs(str(out_dir_patch / "id"), exist_ok=True)
         labels_dir = Path(self.cfg.paths.save_data) / "labels" / dict_coll.subfolder
         for i, tex_dir in enumerate(
             tqdm(

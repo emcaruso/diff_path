@@ -443,6 +443,7 @@ class Trainer:
                 for k, v in loss_total.items():
                     wandb.log({"loss_" + k: v}, step=epoch)
                 progressbar.set_postfix({"loss": loss_total["total"]})
-                scheduler.step()
+                if self.cfg.train.use_scheduler:
+                    scheduler.step()
 
             wandb.finish()

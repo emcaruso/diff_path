@@ -40,7 +40,7 @@ intrinsics_calibration:
       pixel_format: BayerRG8
       # pixel_format: Mono8
       # pixel_format: RGB8
-      exposure_time: 5000
+      exposure_time: 10000
       signal_period: 1000
 
   paths:
@@ -89,7 +89,7 @@ no_render: True
 interactive: True
 
 correction:
-  iterations: 1000
+  iterations: 500
   device: "cuda"
   debug: False
   lr: 0.0001

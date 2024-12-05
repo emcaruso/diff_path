@@ -19,12 +19,12 @@ paths:
 save_name: "cvl1"
 
 render_tables:
-  do: True
+  do: False
   reference:
     location: [0, 0, 0]
     euler: [0, 0, 0]
   ranges:
-    x: [-0.15, 0.20]
+    x: [-0.17, 0.17]
     y: null
     z: null
     e0: null
@@ -47,7 +47,7 @@ generate_bin:
   do: True
 
 pose_estimator:
-  score_thresh: 0.013
+  score_thresh: 0.065
   # score_thresh: 0.01
   # score_thresh: 0.015
   clamp_thresh: 0.02

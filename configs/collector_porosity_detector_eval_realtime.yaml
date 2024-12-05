@@ -8,7 +8,7 @@ paths:
   led_cfg_dir: "${paths.config_dir}/leds.yaml"
   blender_dir: "${paths.calib_data_dir}/scene" # scene folder where there is the blender scene relative to calibration data
 
-  save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/collector_porosity_detector/train/tmp"
+  save_dir: "${oc.env:YAML_DIR}/../data/${save_name}/collector_porosity_detector/eval_realtime/tmp"
   mesh_dir: "${paths.save_dir}/mesh"
   captured_dir: "${paths.save_dir}/captured"
 
@@ -36,7 +36,7 @@ collect_track:
   signal_period: 100000
   exposure_time: 20000
   range_half: 200
-  velocity: (8.5*1600/0.35)*0.002
+  velocity: (8.0*1600/0.35)*0.002
   # velocity: "0"
 
 collect_sequence:

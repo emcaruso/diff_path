@@ -17,6 +17,8 @@ paths:
 save_name: "cvl1"
 
 crop: True
+sRGB: True
+strategy: LatestImageOnly
 
 objects:
   - "cj_machined"

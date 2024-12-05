@@ -12,6 +12,7 @@ import argparse
 from utils_ema.config_utils import load_yaml
 from utils_ema.geometry_pose import Pose
 from utils_ema.image import Image
+from utils_ema.torch_utils import clear_cuda_tensors
 from image_collector import ImageCollector
 from obj_loader import ObjLoader
 from renderer import Renderer
@@ -143,6 +144,9 @@ class Program:
 
                 # l2 loss
                 loss = torch.mean(torch.pow(loss_img, eval(self.cfg.opt.pow)))
+                with torch.no_grad():
+                    n = pixels.shape[0] / 200000
+                loss = loss / n
 
                 # # l1 loss
                 # loss = loss_img.mean()
@@ -198,7 +202,7 @@ class Program:
                 }
             )
             masks.append(torch.ones(3, device=self.objects[0].pose.euler.e.device))
-            if self.cfg.obj_fixed_e1e2:
+            if self.cfg.obj_fixed_ele2:
                 masks[-1][:2] = 0
 
         else:
@@ -210,8 +214,22 @@ class Program:
                     }
                 )
                 masks.append(torch.ones(3, device=obj.pose.euler.e.device))
-                if self.cfg.obj_fixed_e1e2:
+                if self.cfg.obj_fixed_ele2:
                     masks[-1][:2] = 0
+
+        for obj in self.objects:
+            parameters.append(
+                {"params": obj.pose.position, "lr": self.cfg.opt.lr_pos_obj}
+            )
+            masks.append(torch.ones(3, device=self.objects[0].pose.position.device))
+
+        if self.cfg.obj_scale:
+            for obj in self.objects:
+                obj.pose.scale = self.objects[0].pose.scale
+            parameters.append(
+                {"params": self.objects[0].pose.scale, "lr": self.cfg.opt.lr_scl_obj}
+            )
+            masks.append(torch.ones(1, device=self.objects[0].pose.scale.device))
 
             # if self.cfg.obj_fixed_angles:
             #     parameters.append(
@@ -239,25 +257,14 @@ class Program:
         #         parameters.append(
         #             {"params": obj.pose.position[0], "lr": self.cfg.opt.lr_pos_obj}
         #         )
-        #     parameters.append(
-        #         {
-        #             "params": self.objects[0].pose.position[1:3],
-        #             "lr": self.cfg.opt.lr_pos_obj,
-        #         }
-        #     )
-        # else:
-        #     for obj in self.objects:
-        #         parameters.append(
-        #             {"params": obj.pose.position, "lr": self.cfg.opt.lr_pos_obj}
-        #         )
-        #
-        if self.cfg.obj_scale:
-            for obj in self.objects:
-                obj.pose.scale = self.objects[0].pose.scale
-            parameters.append(
-                {"params": self.objects[0].pose.scale, "lr": self.cfg.opt.lr_scl_obj}
-            )
-            masks.append(torch.ones(1, device=self.objects[0].pose.scale.device))
+        #         masks.append(torch.ones(1, device=self.objects[0].pose.position.device))
+        # parameters.append(
+        #     {
+        #         "params": self.objects[0].pose.position[1:3],
+        #         "lr": self.cfg.opt.lr_pos_obj,
+        #     }
+        # )
+        # masks.append(torch.ones(2, device=self.objects[0].pose.position.device))
 
         if self.cfg.opt_boards and self.cfg.with_boards:
             for i, board in enumerate(self.scene.boards):
@@ -266,6 +273,13 @@ class Program:
                         {"params": board.pose.euler.e, "lr": self.cfg.opt.lr_eul_brd}
                     )
                     masks.append(torch.ones(3, device=board.pose.euler.e.device))
+                else:
+                    parameters.append(
+                        {"params": board.pose.euler.e, "lr": self.cfg.opt.lr_eul_brd}
+                    )
+                    masks.append(
+                        torch.tensor([0, 0, 1], device=board.pose.euler.e.device)
+                    )
                 parameters.append(
                     {"params": board.pose.position, "lr": self.cfg.opt.lr_pos_brd}
                 )
@@ -302,7 +316,6 @@ class Program:
             range(self.cfg.opt.iterations), desc="Optimization for pose estimation"
         )
 
-        # for it in range(self.cfg.opt.iterations):
         for it in progress_bar:
 
             loss_total = {}
@@ -337,7 +350,8 @@ class Program:
             # for p in parameters:
             #     print(p.grad)
 
-        self.edged_pose_estim_step(it=self.cfg.opt.iterations, wk=0)
+        # clear_cuda_tensors()
+        # self.edged_pose_estim_step(it=self.cfg.opt.iterations, wk=0)
 
         with torch.no_grad():
             self.saver.save_cameras(self.scene.get_cams())
@@ -345,6 +359,7 @@ class Program:
             self.saver.save_object_poses(self.objects)
             self.saver.overwrite_object_poses(self.objects)
             self.saver.save_board_poses(self.scene.boards)
+            self.saver.overwrite_board_poses(self.scene.boards)
             self.saver.update_blender(self.cfg)
             self.saver.save_camera_images(
                 self.renderer, self.scene.get_cams(), self.objects, self.images

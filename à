@@ -1,0 +1,245 @@
+import os
+import numpy as np
+import torch
+from utils_ema.memory_mapped import load_memory_mapped_indices
+from utils_ema.geometry_pose import Pose
+from utils_ema.basler_utils import frame_extractor
+from utils_ema.image import Image
+from utils_ema.config_utils import load_yaml
+from utils_ema.torch_utils import get_device
+from multiprocessing import Process
+
+
+class PoseEstimator:
+    def __init__(self, dataset_path):
+        self.dataset_path = dataset_path
+        self.device = get_device()
+
+        self.tables_dir = os.path.join(self.dataset_path, "tables")
+        self.ref_dir = os.path.join(self.dataset_path, "reference")
+        self.cfg = load_yaml(os.path.join(self.dataset_path, "config.yaml"))
+
+        self.load_table_poses()
+        self.idxs = None
+
+    def load_table_images(self):
+        self.idxs = load_memory_mapped_indices(self.cfg.paths.tables_dir, "idxs")
+
+    def clear_table_images(self):
+        self.idxs = None
+
+    def load_table_poses(self):
+        table_data_path = os.path.join(self.tables_dir, "poses.npy")
+        raw_data = np.load(table_data_path, allow_pickle=True)
+        self.n_poses = len(raw_data)
+        self.pose_data = [Pose(T=r) for r in raw_data]
+
+    def show_references(self):
+        images = self.get_references()
+        Image.show_multiple_images(images, wk=0, name="reference")
+
+    def get_references(self):
+        img_files = list(os.listdir(self.ref_dir))
+        img_files.sort()
+        images = [
+            Image(path=os.path.join(self.ref_dir, img_file)) for img_file in img_files
+        ]
+        for image in images:
+            image.img[..., 0] *= 0
+        for image in images:
+            image.img[..., 1] *= 0
+        return images
+
+    def __get_belief_tens(self, images, rang, debug):
+        with torch.no_grad():
+            if self.idxs is None:
+                self.load_table_images()
+
+            n_cams = len(images)
+            self.n_poses = len(self.idxs[0])
+
+            # belief_tensor = torch.zeros( (n_cams, self.n_poses), dtype=torch.int32 )
+            belief_tensor = torch.zeros((n_cams, self.n_poses), dtype=torch.float32)
+
+            for cam_id, img in enumerate(images):
+
+                # sobel on image
+                img_sobel = img.sobel_diff()
+                idxs_coll = self.idxs[cam_id]
+
+                # limit possible states with rang
+                if rang is None:
+                    rang = torch.tensor([[0, len(idxs_coll) - 1]] * n_cams)
+                idxs_coll_local = idxs_coll[rang[cam_id, 0] : rang[cam_id, 1]]
+
+                # pose guesses
+                for pose_id, idxs in enumerate(idxs_coll_local):
+
+                    # pose_id = pose_id + rang[cam_id][0]
+                    mask_values = img_sobel.img[
+                        idxs[:, 0] * self.cfg.pose_estimator.scale_fact,
+                        idxs[:, 1] * self.cfg.pose_estimator.scale_fact,
+                    ]
+                    mask_values_clamp = torch.clamp_max(
+                        mask_values, self.cfg.pose_estimator.clamp_thresh
+                    )
+                    val = mask_values_clamp.mean()
+                    belief_tensor[cam_id][pose_id] = val
+
+        return belief_tensor
+
+    def __get_pose_data_base(
+        self, belief_tensor, images, synch, rang=None, debug=False
+    ):
+        n_cams = len(images)
+
+        if rang is None:
+            rang = torch.zeros(n_cams, 1, dtype=torch.int32)
+
+        best_pose_id = []
+        pose = []
+        score = None
+
+        # if synch:
+        #     best_pose_id = [torch.argmax( torch.mean(belief_tensor,dim=0) ).item()] * n_cams
+        #     pose =  [self.pose_data[best_pose_id]] * n_cams
+
+        if synch:
+
+            # best pose
+            best_pose_id = torch.tensor(
+                [torch.argmax(torch.mean(belief_tensor, dim=0)).item()] * n_cams
+            )
+
+            # get score
+            scores = [
+                [
+                    belief_tensor[cam_id][best_pose_id[cam_id]]
+                    for cam_id in range(n_cams)
+                ]
+            ]
+            score_mean = torch.mean(torch.tensor(scores))
+
+            # final pose id and pose
+            best_pose_id += rang[:, 0]
+            pose = [self.pose_data[best_pose_id[0]]] * n_cams
+
+        else:
+            scores = []
+            for cam_id, b in enumerate(belief_tensor):
+
+                # best pose
+                pose_id = torch.argmax(b).item()
+                best_pose_id.append(pose_id + rang[cam_id, 0])
+
+                # score
+                scores.append(belief_tensor[cam_id][pose_id])
+
+                # final pose id and pose
+                p = self.pose_data[best_pose_id[-1]]
+                print(p.location())
+                pose.append(p)
+            best_pose_id = torch.tensor(best_pose_id)
+            score_mean = torch.mean(torch.tensor(scores))
+
+        in_thresh = score_mean > self.cfg.pose_estimator.score_thresh
+
+        if debug:
+            print(
+                "val: ", score_mean, ", thresh: ", self.cfg.pose_estimator.score_thresh
+            )
+
+        return best_pose_id, belief_tensor, pose, in_thresh
+
+    def __get_pose_data(self, images, synch, rang=None, debug=False):
+
+        # all in device
+        for image in images:
+            image.to(self.device)
+
+        belief_tensor = self.__get_belief_tens(images, rang, debug)
+        return self.__get_pose_data_base(
+            belief_tensor, images, synch, rang=rang, debug=debug
+        )
+
+    def get_pose(self, images, rang=None, synch=False, debug=False):
+        _, _, pose, _ = self.__get_pose_data(
+            images, rang=rang, synch=synch, debug=False
+        )
+        return pose
+
+    def append_pose_parallel_aux(
+        self, queue, belief_tensor, images, rang=None, synch=False, debug=False
+    ):
+        best_pose_id, belief_tensor, pose, in_thresh = self.__get_pose_data_base(
+            belief_tensor, images, synch, rang=rang, debug=debug
+        )
+        queue.put(pose)
+
+    def append_pose_parallel(self, queue, images, rang=None, synch=False, debug=False):
+        with torch.no_grad():
+            belief_tensor = self.__get_belief_tens(images, rang, debug)
+        belief_tensor = belief_tensor.cpu()
+        p = Process(
+            target=self.append_pose_parallel_aux,
+            args=(queue, belief_tensor, images, rang, synch, debug),
+        )
+        p.start()
+        return p
+
+    def save_pose_parallel_base(
+        self, i, path, belief_tensor, images, rang=None, synch=False, debug=False
+    ):
+        _, _, pose, _ = self.__get_pose_data_base(
+            belief_tensor, images, synch, rang=rang, debug=debug
+        )
+        out_dir = os.path.join(self.cfg.paths.captured_dir, "tmp")
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        np.save(
+            os.path.join(out_dir, str(i).zfill(3) + ".npy"), pose, allow_pickle=True
+        )
+        print("saved at: ", os.path.join(out_dir, str(i).zfill(3) + ".npy"))
+
+    def save_pose_parallel(self, i, path, images, rang=None, synch=False, debug=False):
+        belief_tensor = self.__get_belief_tens(images, rang, debug)
+        return Process(
+            target=self.save_pose_parallel_base,
+            args=(i, path, belief_tensor, images, rang, synch, debug),
+        ).start()
+
+    def __overlap_from_pose_data(self, best_pose_id, images, in_thresh):
+        if self.idxs is None:
+            self.load_table_images()
+
+        n_cams = len(images)
+
+        channel = 0
+        if in_thresh:
+            channel = 2
+
+        images_overlapped = []
+        for cam_id in range(n_cams):
+            image_overlapped = images[cam_id].clone()
+            # idxs = self.idxs[cam_id][best_pose_id[cam_id]]
+            idxs = self.idxs[cam_id][best_pose_id[cam_id]]
+            p = idxs * self.cfg.pose_estimator.scale_fact
+            image_overlapped.img[p[:, 0], p[:, 1], :] = 0
+            image_overlapped.img[p[:, 0], p[:, 1], channel] = (
+                image_overlapped.get_max_val()
+            )
+            images_overlapped.append(image_overlapped)
+
+        return images_overlapped
+
+    def overlap_pose_from_idx(self, images, idx):
+        images = self.__overlap_from_pose_data(idx, images, True)
+        return images
+
+    def overlap_estimated_pose(self, images, synch=False, rang=None, debug=False):
+
+        best_pose_id, belief_tensor, pose, in_thresh = self.__get_pose_data(
+            images, synch, rang=rang, debug=debug
+        )
+        images = self.__overlap_from_pose_data(best_pose_id, images, in_thresh)
+        return images, pose, in_thresh, best_pose_id

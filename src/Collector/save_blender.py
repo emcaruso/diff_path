@@ -24,7 +24,7 @@ for obj_name in obj_names:
 
     # load poses and leds
     npy_poses = np.load(os.path.join(captured_dir, "poses.npy"), allow_pickle=True)
-    poses = [Pose(T=torch.from_numpy(T)) for T in npy_poses]
+    poses = [p for p in npy_poses]
     leds = np.load(os.path.join(captured_dir, "leds.npy"), allow_pickle=True)
 
     clear_animation_data(obj)

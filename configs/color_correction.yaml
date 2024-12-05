@@ -1,14 +1,11 @@
 paths:
   config_dir: "${oc.env:YAML_DIR}"
-  leds_config: "${paths.config_dir}/leds.yaml" 
+  leds_config: "${paths.config_dir}/leds.yaml"
 
   # output
-  save_dir: "${paths.config_dir}/../data/${save_name}/color_correction_data" 
+  save_dir: "${paths.config_dir}/../data/${save_name}/color_correction_data"
 
 save_name: "cvl1"
-frames: 100
-
-
-mode: "led"
-# mode: "tablet"
-exposure_time: 100
+frames: 40
+srgb: Off
+exposure_time: 40000

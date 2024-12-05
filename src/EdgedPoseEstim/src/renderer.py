@@ -12,6 +12,10 @@ class Renderer:
     def get_sobel_synth(self, cam, obj):
         normals = self.render_normals(cam, obj)
         sobel = normals.sobel_diff(kernel_size=self.cfg.kernel_sobel)
+        sobel.img[:, 0] = 0
+        sobel.img[:, -1] = 0
+        sobel.img[0, :] = 0
+        sobel.img[-1, :] = 0
         return sobel
 
     @staticmethod

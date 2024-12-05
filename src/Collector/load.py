@@ -1,6 +1,7 @@
 import cv2
 import torch
 import os
+import itertools
 from utils_ema.camera_cv import *
 from utils_ema.text import read_content, write_content
 from utils_ema.geometry_pose import *
@@ -36,40 +37,92 @@ class CollectorLoader:
     def set_subfolder(self, subfolder):
         self.subfolder = subfolder
 
-    def get_poses(self):
-        pose_path = os.path.join(
-            self.cfg.paths.captured_dir, self.subfolder, "poses.npy"
-        )
+    def get_poses(self, asyncr=False):
+        if not hasattr(self, "poses"):
+            pose_path = os.path.join(
+                self.cfg.paths.captured_dir, self.subfolder, "poses.npy"
+            )
 
-        if not os.path.exists(pose_path):
-            raise ValueError(f"{pose_path} not valid path!")
+            if not os.path.exists(pose_path):
+                raise ValueError(f"{pose_path} not valid path!")
 
-        poses = np.load(pose_path, allow_pickle=True)
+            poses = np.load(pose_path, allow_pickle=True)
 
-        return poses
+            if asyncr:
+                in_thresh = self.get_in_thresh(asyncr=True)
+                poses = [
+                    p for i, p in enumerate(itertools.chain(*poses)) if in_thresh[i]
+                ]
+            self.poses = poses
 
-    def get_lights_data(self):
-        leds_path = os.path.join(
-            self.cfg.paths.captured_dir, self.subfolder, "leds.npy"
-        )
+        return self.poses
 
-        if not os.path.exists(leds_path):
-            raise ValueError(f"{leds_path} not valid path!")
+    def get_lights_data(self, asyncr=False):
+        if not hasattr(self, "lights_data"):
+            leds_path = os.path.join(
+                self.cfg.paths.captured_dir, self.subfolder, "leds.npy"
+            )
 
-        lights_mat = np.load(leds_path, allow_pickle=True)
+            if not os.path.exists(leds_path):
+                raise ValueError(f"{leds_path} not valid path!")
 
-        lights_data = []
-        for i, l in enumerate(lights_mat):
-            lights_data.append(l)
+            lights_mat = np.load(leds_path, allow_pickle=True)
+
             # pose = Pose(T=torch.from_numpy(l))
             # poses["frame_"+str(i).zfill(3)] = pose
 
-        # for i, ff in enumerate(self.sequence_dir):
-        #     light_path = os.path.join(ff,"led.npy")
-        #     d = np.load(light_path, allow_pickle=True)
-        #     lights_data.append(d)
+            # for i, ff in enumerate(self.sequence_dir):
+            #     light_path = os.path.join(ff,"led.npy")
+            #     d = np.load(light_path, allow_pickle=True)
+            #     lights_data.append(d)
 
-        return lights_data
+            if asyncr:
+                in_thresh = self.get_in_thresh(asyncr=True)
+                lights_data = [
+                    l
+                    for i, l in enumerate(itertools.chain(*lights_mat))
+                    if in_thresh[i]
+                ]
+            else:
+                for i, l in enumerate(lights_mat):
+                    lights_data.append(l)
+            self.lights_data = lights_data
+
+        return self.lights_data
+
+    def get_in_thresh(self, asyncr=False):
+        if not hasattr(self, "in_thresh"):
+            inthresh_path = os.path.join(
+                self.cfg.paths.captured_dir, self.subfolder, "in_thresh.npy"
+            )
+
+            if not os.path.exists(inthresh_path):
+                raise ValueError(f"{inthresh_path} not valid path!")
+
+            in_thresh = np.load(inthresh_path, allow_pickle=True)
+
+            if asyncr:
+                in_thresh = [i for i in itertools.chain(*in_thresh)]
+
+            self.in_thresh = in_thresh
+
+        return self.in_thresh
+
+    def get_camera_ids_for_frames(self):
+
+        # get cams
+        cam_path = os.path.join(self.cfg.paths.captured_dir, self.subfolder, "cams.npy")
+
+        if not os.path.exists(cam_path):
+            raise ValueError(f"{cam_path} not valid path!")
+
+        cams = np.load(cam_path, allow_pickle=True)
+        cams = [c for c in itertools.chain(*cams)]
+
+        # get in_thresh
+        in_thresh = self.get_in_thresh(asyncr=True)
+
+        return [c for i, c in enumerate(cams) if in_thresh[i]]
 
     # def __get_lights_data(self):
     #     lights = {}
@@ -88,14 +141,6 @@ class CollectorLoader:
     #         intensities[os.path.basename(ff)] = pose
     #     return intensities
     #
-    def get_scene(self):
-        f = load_function_from_path(
-            os.path.join(self.cfg.paths.calib_data_dir, "data_loader.py"),
-            "get_data_loader",
-        )
-        dl = f()
-        scene = dl.get_scene()
-        return scene
 
     def get_images_gen(self, overlap=False, device="cpu", dtype=torch.float32):
         images_dict = {}
@@ -141,28 +186,45 @@ class CollectorLoader:
     # def get_mesh(self):
     #     mesh_dir = self.cfg.paths.mesh_dir
 
-    def get_scene(self):
-
-        # get original scene
-        f = load_function_from_path(
-            os.path.join(self.cfg.paths.calib_data_dir, "data_loader.py"),
-            "get_data_loader",
-        )
-        dl = f()
-        scene = dl.get_scene()
-
-        # add poses
-        poses = list(self.get_poses().values())
-        n_poses = len(poses)
-
-        # extend cameras
+    def _get_cams_asyncr(self, scene):
         cams = scene.get_cams()
+        in_thresh = self.get_in_thresh(asyncr=True)
+        ids = self.get_camera_ids_for_frames()
+        k = 0
+
         if cams is not None:
             new_cams = []
             imgs_path = os.path.join(
                 self.cfg.paths.captured_dir, self.subfolder, "sequences"
             )
-            for i in range(n_poses):
+            for i in range(len(in_thresh)):
+                frame = i // len(cams)
+                if in_thresh[i]:
+                    cam_id = ids[k]
+                    cam = cams[cam_id]
+                    img_path = os.path.join(
+                        imgs_path,
+                        "Cam_" + str(cam_id).zfill(3),
+                        str(frame).zfill(3) + ".png",
+                    )
+                    new_cam = cam.clone(
+                        same_intr=True, same_pose=True, image_paths={"rgb": img_path}
+                    )
+                    new_cam.load_images()
+                    new_cams.append([new_cam])
+                    k += 1
+            scene.cams = new_cams
+            return new_cams
+
+    def _get_cams(self, scene, poses):
+        cams = scene.get_cams()
+
+        if cams is not None:
+            new_cams = []
+            imgs_path = os.path.join(
+                self.cfg.paths.captured_dir, self.subfolder, "sequences"
+            )
+            for i in range(len(poses)):
                 new_cams.append([])
                 for j, cam in enumerate(cams):
                     img_path = os.path.join(
@@ -174,20 +236,78 @@ class CollectorLoader:
                     new_cam.load_images()
                     new_cams[-1].append(new_cam)
             scene.cams = new_cams
+            return new_cams
 
-        # extend lights
-        lights_data = self.get_lights_data()
+    def _get_lights(self, scene):
+        lights = scene.get_lights()
+        lights_data = self.get_lights_data(asyncr=False)
+        poses = self.get_poses(asyncr=False)
         lights = scene.get_lights()
         if lights is not None:
             new_lights = []
-            for i in range(n_poses):
+            for i in range(len(poses)):
                 new_lights.append([])
                 for j, light in enumerate(lights):
                     new_light = light.clone(same_position=True)
-                    new_intensity = lights_data[i][j]["intensity"]
+                    if light.name == lights_data[i].name:
+                        new_intensity = lights_data[i].intensity
+                    else:
+                        new_intensity = 0
                     new_light.intensity = new_intensity
                     new_lights[-1].append(new_light)
             scene.lights = new_lights
+            return new_lights
+
+    def _get_lights_asyncr(self, scene):
+        lights_data = self.get_lights_data(asyncr=True)
+        lights = scene.get_lights()
+        if lights is not None:
+            new_lights = []
+            for i, l in enumerate(lights_data):
+                new_lights.append([])
+                for j, light in enumerate(lights):
+                    new_light = light.clone(same_position=True)
+                    if light.name == l.name:
+                        new_intensity = l.intensity
+                    else:
+                        new_intensity = 0
+                    new_light.intensity = new_intensity
+                    new_lights[-1].append(new_light)
+            scene.lights = new_lights
+
+            # # debug
+            # for i in new_lights:
+            #     print([l.intensity for l in i])
+
+            return new_lights
+
+    def get_scene(self, asyncr=False):
+
+        # get original scene
+        f = load_function_from_path(
+            os.path.join(self.cfg.paths.calib_data_dir, "data_loader.py"),
+            "get_data_loader",
+        )
+        dl = f()
+        scene = dl.get_scene()
+
+        # add poses
+        poses = self.get_poses(asyncr=asyncr)
+        n_poses = len(poses)
+
+        # get cameras
+        if asyncr:
+            cams = self._get_cams_asyncr(scene)
+        else:
+            cams = self._get_cams(scene, poses)
+
+        # get lights
+        if asyncr:
+            lights = self._get_lights_asyncr(scene)
+        else:
+            lights = self._get_lights(scene)
+
+        # extend lights
 
         # put and extend objects
         mesh_path = [
@@ -203,19 +323,20 @@ class CollectorLoader:
         # mitsuba_scene
         xml_path = os.path.join(self.cfg.paths.save_mitsuba_scene, "scene.xml")
 
-        self.modify_xml(xml_path, scene)
+        self.modify_xml(xml_path, cams)
         scene_mitsuba = MitsubaScene(xml_path=xml_path)
 
         scene.set_mitsuba_scene(self.get_mitsuba_scene())
 
         return scene
 
-    def modify_xml(self, xml_path, scene):
+    def modify_xml(self, xml_path, cams):
         content = read_content(xml_path)
 
         res_list = []
-        for cam in scene.get_cams_in_frame(0):
-            res_list.append(tuple(cam.intr.resolution.tolist()))
+        # for cam in scene.get_cams_in_frame(0):
+        for cam in cams:
+            res_list.append(tuple(cam[0].intr.resolution.tolist()))
 
         for res in res_list:
             content = content.replace("$resx", str(res[0]), 1)

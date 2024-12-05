@@ -17,9 +17,11 @@ try:
         const=1,
         default=1,
     )
-    args = parser.parse_args()
-    led_intensity = args.int
-    led_intensity = max(0, min(1, led_intensity))
+
+    # args = parser.parse_args()
+    # led_intensity = args.int
+    # led_intensity = max(0, min(1, led_intensity))
+    led_intensity = 1.0
 
     # Turn on LEDs
     src_dir = os.path.abspath(os.path.dirname(__file__))

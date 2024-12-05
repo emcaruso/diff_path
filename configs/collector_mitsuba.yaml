@@ -22,17 +22,23 @@ paths:
 save_name: "cvl1"
 
 crop: True
-sRGB: True
+sRGB: False
+strategy: UpcomingImage
 
 objects:
-  - "cj_machined"
-  - "cj_unmachined"
+  - "cj_lowpoly"
 
 normalization:
   color_correction: True
   exposure_time_ref: 10000
 
-led_amp: 1.2
+led_amp: 1.5
+
+exposure_time: 25000
+signal_period: 10000
+range_half: 15
+# velocity: (8.*1600/0.34)*0.00145
+velocity: "0"
 
 collect_manual:
   # signal_period: 100000
@@ -42,13 +48,12 @@ collect_manual:
 collect_track:
   signal_period: 100000
   exposure_time: 7500
-  range_half: 40
+  velocity: (8.5*1600/0.35)*0.002
 
 collect_sequence:
   sequence: # list of couples (light_id, value on x axis)
     # - [ 0, -0.25 ]
     - [0, 1000]
-
     # - [ 1, -0.15 ]
     # - [ 0, -0.12 ]
     # - [ 2, -0.10 ]
@@ -61,3 +66,12 @@ collect_sequence:
     #
     #
     #
+
+collect_video:
+  init: "pose"
+  # init: 40 # start point in frames
+  end: "pose"
+  # end: 40 # start point in frames
+  out: "png"
+
+n_frames: 20

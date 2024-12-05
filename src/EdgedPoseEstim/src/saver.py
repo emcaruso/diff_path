@@ -84,7 +84,25 @@ class Saver:
         fs.release()
 
     def overwrite_board_poses(self, boards):
-        pass
+        print("Overwriting board poses")
+
+        out_dir = os.path.join(
+            self.cfg.paths.data_in_dir, "output", "global", "obj_poses.yml"
+        )
+
+        poses = []
+        for i, board in enumerate(boards):
+            poses.append(board.pose)
+
+        fs = cv2.FileStorage(out_dir, cv2.FILE_STORAGE_WRITE)
+        fs.write("nb", len(poses))
+        for i_board, pose in enumerate(poses):
+            fs.startWriteStruct("obj_" + str(i_board), cv2.FileNode_MAP)
+            fs.write("w_T_obj", pose.get_T().numpy())
+            fs.write("obj_T_w", pose.get_T_inverse().numpy())
+            fs.endWriteStruct()
+            # plotter.plot_pose(pose)
+        fs.release()
 
     def update_blender(self, cfg):
         blend_file = get_blend_file(self.cfg.paths.calib_scene_dir)
